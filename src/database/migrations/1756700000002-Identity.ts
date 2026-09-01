@@ -59,6 +59,11 @@ export class Identity1756700000002 implements MigrationInterface {
         "id"                    text NOT NULL PRIMARY KEY,
         "accountId"             text NOT NULL,
         "providerId"            text NOT NULL,
+        -- Added in better-auth 1.7: account identity is scoped by issuer.
+        -- The CLI that generated the rest of this file bundles better-auth
+        -- 1.6.21 and therefore omits it. Taken from getMigrations() run
+        -- against the version this project actually depends on, 1.7.1.
+        "issuer"                text NOT NULL,
         "userId"                text NOT NULL REFERENCES "user" ("id") ON DELETE CASCADE,
         "accessToken"           text,
         "refreshToken"          text,
@@ -85,6 +90,9 @@ export class Identity1756700000002 implements MigrationInterface {
 
     await queryRunner.query(`CREATE INDEX "session_userId_idx" ON "session" ("userId")`);
     await queryRunner.query(`CREATE INDEX "account_userId_idx" ON "account" ("userId")`);
+    await queryRunner.query(
+      `CREATE UNIQUE INDEX "account_issuer_accountId_uidx" ON "account" ("issuer", "accountId")`,
+    );
     await queryRunner.query(
       `CREATE INDEX "verification_identifier_idx" ON "verification" ("identifier")`,
     );
