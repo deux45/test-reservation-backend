@@ -34,19 +34,19 @@ Backend: NestJS + PostgreSQL + TypeORM · Frontend: Next.js + React + MUI
 
 ## 0. Decisiones fundacionales
 
-| Decisión | Elección | Por qué | Descartado |
-|---|---|---|---|
-| Dónde vive la invariante | **PostgreSQL**, `EXCLUDE USING gist` | Único punto por el que pasan todas las escrituras. Ninguna réplica ni script puede violarla. | Validar solo en el servicio: se rompe con dos instancias. |
-| Semántica del intervalo | **Semiabierto `[start, end)`** | 10:00–11:00 y 11:00–12:00 son contiguas, no conflictivas. | Cerrado `[]`: haría chocar reservas consecutivas. |
-| Concurrencia | **Advisory lock por recurso** + constraint | Serializa solo el mismo recurso. Permite un 409 con datos útiles. | `SERIALIZABLE`: obliga a bucles de reintento. |
-| Tipos de recurso | **Una tabla + `jsonb` validado con JSON Schema** | Añadir "vehículo" es insertar una fila, no desplegar código. | Tabla por tipo o herencia: rompe las consultas transversales. |
-| Estilo de capas | **Módulo por dominio con carpetas planas** (`controllers/`, `dtos/`, `entities/`, `repositories/`, `services/`) | Convención estándar de NestJS y la misma que ya usa `avanti-crm-backend`. Se navega sin mapa. | Hexagonal con `domain/application/infrastructure`: triplica ficheros sin añadir garantías a esta escala (§3.1). |
-| Autenticación | **Better Auth tras un adaptador propio** (§3.10), mismo Postgres, sesión por cookie | Un proveedor de identidad para API y front, detrás de un puerto de dos métodos. Sustituirlo cuesta 1 fichero, no 45. | El paquete comunitario `@thallesp/nestjs-better-auth`: son 40 líneas propias las que ahorra, y a cambio mete una dependencia no oficial en la ruta de autenticación. |
-| Zona horaria | **`timestamptz` siempre**; TZ del recurso solo para calcular | UTC en disco elimina los bugs de horario de verano. | `timestamp` sin zona. |
-| Versiones de dependencias | **Cooldown de 7 días** sobre la última estable | Todos los incidentes de 2025–2026 se detectaron en < 7 días. | Instalar `latest`: es exactamente el vector de ataque. |
+| Decisión                  | Elección                                                                                                        | Por qué                                                                                                              | Descartado                                                                                                                                                           |
+| ------------------------- | --------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Dónde vive la invariante  | **PostgreSQL**, `EXCLUDE USING gist`                                                                            | Único punto por el que pasan todas las escrituras. Ninguna réplica ni script puede violarla.                         | Validar solo en el servicio: se rompe con dos instancias.                                                                                                            |
+| Semántica del intervalo   | **Semiabierto `[start, end)`**                                                                                  | 10:00–11:00 y 11:00–12:00 son contiguas, no conflictivas.                                                            | Cerrado `[]`: haría chocar reservas consecutivas.                                                                                                                    |
+| Concurrencia              | **Advisory lock por recurso** + constraint                                                                      | Serializa solo el mismo recurso. Permite un 409 con datos útiles.                                                    | `SERIALIZABLE`: obliga a bucles de reintento.                                                                                                                        |
+| Tipos de recurso          | **Una tabla + `jsonb` validado con JSON Schema**                                                                | Añadir "vehículo" es insertar una fila, no desplegar código.                                                         | Tabla por tipo o herencia: rompe las consultas transversales.                                                                                                        |
+| Estilo de capas           | **Módulo por dominio con carpetas planas** (`controllers/`, `dtos/`, `entities/`, `repositories/`, `services/`) | Convención estándar de NestJS y la misma que ya usa `avanti-crm-backend`. Se navega sin mapa.                        | Hexagonal con `domain/application/infrastructure`: triplica ficheros sin añadir garantías a esta escala (§3.1).                                                      |
+| Autenticación             | **Better Auth tras un adaptador propio** (§3.10), mismo Postgres, sesión por cookie                             | Un proveedor de identidad para API y front, detrás de un puerto de dos métodos. Sustituirlo cuesta 1 fichero, no 45. | El paquete comunitario `@thallesp/nestjs-better-auth`: son 40 líneas propias las que ahorra, y a cambio mete una dependencia no oficial en la ruta de autenticación. |
+| Zona horaria              | **`timestamptz` siempre**; TZ del recurso solo para calcular                                                    | UTC en disco elimina los bugs de horario de verano.                                                                  | `timestamp` sin zona.                                                                                                                                                |
+| Versiones de dependencias | **Cooldown de 7 días** sobre la última estable                                                                  | Todos los incidentes de 2025–2026 se detectaron en < 7 días.                                                         | Instalar `latest`: es exactamente el vector de ataque.                                                                                                               |
 
-**Principio rector.** El enunciado dice: *"preferimos un sistema simple y sólido antes que
-uno ambicioso y roto"*. Este diseño concentra su complejidad en la creación de reservas y
+**Principio rector.** El enunciado dice: _"preferimos un sistema simple y sólido antes que
+uno ambicioso y roto"_. Este diseño concentra su complejidad en la creación de reservas y
 mantiene todo lo demás deliberadamente aburrido. Reservas recurrentes y notificaciones
 quedan **fuera de alcance**, y eso se justifica en el documento reflexivo.
 
@@ -54,43 +54,43 @@ quedan **fuera de alcance**, y eso se justifica en el documento reflexivo.
 
 ## 1. Stack y versiones verificadas
 
-Consultado al registro de npm el **2026-09-01**. La columna *Edad* es días desde su
+Consultado al registro de npm el **2026-09-01**. La columna _Edad_ es días desde su
 publicación; la columna **Pin** es la versión a fijar aplicando el cooldown de 7 días (§2).
 
 ### 1.1 Backend
 
-| Paquete | Última | Edad | **Pin** |
-|---|---|---:|---|
-| `@nestjs/core`, `@nestjs/common`, `@nestjs/platform-express` | 12.0.1 | 4d | **11.2.1** |
-| `@nestjs/config` | 12.0.0 | 4d | **4.0.4** |
-| `@nestjs/swagger` | 12.0.1 | 3d | **11.4.7** |
-| `@nestjs/typeorm` | 12.0.1 | 3d | **11.0.3** |
-| `@nestjs/terminus` | 12.0.0 | 0d | **11.1.1** |
-| `typeorm` | 1.1.0 | 49d | **1.1.0** |
-| `pg` | 8.23.0 | 23d | **8.23.0** |
-| `better-auth` | 1.7.2 | 5d | **1.7.1** |
-| ~~`@thallesp/nestjs-better-auth`~~ | 2.7.0 | 58d | **descartado** ⚠️ |
-| `class-validator` | 0.15.1 | 186d | **0.15.1** |
-| `class-transformer` | 0.5.1 | **1743d** | **0.5.1** ⚠️ |
-| `ajv` | 8.20.0 | 129d | **8.20.0** |
-| `zod` | 4.5.4 | 2d | **4.4.3** |
-| `nestjs-pino` | 5.0.0 | 0d | **4.6.1** |
-| `pino` | 10.3.1 | 203d | **10.3.1** |
-| `typescript` | 7.0.2 | 54d | **6.0.3** ⚠️ |
-| `jest` | 30.5.0 | 3d | **30.4.2** |
-| `ts-jest` | 29.4.12 | 40d | **29.4.12** |
-| `supertest` | 7.2.2 | 237d | **7.2.2** |
-| `testcontainers`, `@testcontainers/postgresql` | 12.1.0 | 27d | **12.1.0** |
-| `eslint` | 10.9.1 | 7d | **10.9.1** |
-| `prettier` | 3.9.6 | 41d | **3.9.6** |
-| `husky` | 9.1.7 | 651d | **9.1.7** |
-| `lint-staged` | 17.4.1 | 4d | **17.3.0** |
-| `@faker-js/faker` | 10.6.0 | 17d | **10.6.0** |
-| `reflect-metadata` | 0.2.2 | 886d | **0.2.2** |
-| `rxjs` | 7.8.2 | 556d | **7.8.2** |
-| `date-fns` | 4.4.0 | 94d | **4.4.0** |
+| Paquete                                                      | Última  |      Edad | **Pin**           |
+| ------------------------------------------------------------ | ------- | --------: | ----------------- |
+| `@nestjs/core`, `@nestjs/common`, `@nestjs/platform-express` | 12.0.1  |        4d | **11.2.1**        |
+| `@nestjs/config`                                             | 12.0.0  |        4d | **4.0.4**         |
+| `@nestjs/swagger`                                            | 12.0.1  |        3d | **11.4.7**        |
+| `@nestjs/typeorm`                                            | 12.0.1  |        3d | **11.0.3**        |
+| `@nestjs/terminus`                                           | 12.0.0  |        0d | **11.1.1**        |
+| `typeorm`                                                    | 1.1.0   |       49d | **1.1.0**         |
+| `pg`                                                         | 8.23.0  |       23d | **8.23.0**        |
+| `better-auth`                                                | 1.7.2   |        5d | **1.7.1**         |
+| ~~`@thallesp/nestjs-better-auth`~~                           | 2.7.0   |       58d | **descartado** ⚠️ |
+| `class-validator`                                            | 0.15.1  |      186d | **0.15.1**        |
+| `class-transformer`                                          | 0.5.1   | **1743d** | **0.5.1** ⚠️      |
+| `ajv`                                                        | 8.20.0  |      129d | **8.20.0**        |
+| `zod`                                                        | 4.5.4   |        2d | **4.4.3**         |
+| `nestjs-pino`                                                | 5.0.0   |        0d | **4.6.1**         |
+| `pino`                                                       | 10.3.1  |      203d | **10.3.1**        |
+| `typescript`                                                 | 7.0.2   |       54d | **6.0.3** ⚠️      |
+| `jest`                                                       | 30.5.0  |        3d | **30.4.2**        |
+| `ts-jest`                                                    | 29.4.12 |       40d | **29.4.12**       |
+| `supertest`                                                  | 7.2.2   |      237d | **7.2.2**         |
+| `testcontainers`, `@testcontainers/postgresql`               | 12.1.0  |       27d | **12.1.0**        |
+| `eslint`                                                     | 10.9.1  |        7d | **10.9.1**        |
+| `prettier`                                                   | 3.9.6   |       41d | **3.9.6**         |
+| `husky`                                                      | 9.1.7   |      651d | **9.1.7**         |
+| `lint-staged`                                                | 17.4.1  |        4d | **17.3.0**        |
+| `@faker-js/faker`                                            | 10.6.0  |       17d | **10.6.0**        |
+| `reflect-metadata`                                           | 0.2.2   |      886d | **0.2.2**         |
+| `rxjs`                                                       | 7.8.2   |      556d | **7.8.2**         |
+| `date-fns`                                                   | 4.4.0   |       94d | **4.4.0**         |
 
-> ⚠️ **TypeScript 7 rompe el build. Se fija la 6.0.3.** El compilador nativo (tsgo) *sí*
+> ⚠️ **TypeScript 7 rompe el build. Se fija la 6.0.3.** El compilador nativo (tsgo) _sí_
 > emite `experimentalDecorators` y `emitDecoratorMetadata`, así que el `design:paramtypes`
 > que lee el inyector de Nest sigue existiendo. El problema es otro: **TypeScript 7 no
 > expone API programática de compilador**, y `nest build`, `ts-jest`, `ts-loader` y
@@ -115,11 +115,11 @@ publicación; la columna **Pin** es la versión a fijar aplicando el cooldown de
 > el punto de sustitución del proveedor: mejora en las dos direcciones. `better-auth` sí se
 > usa, directamente y solo dentro de `src/auth/providers/`.
 
-> **NestJS 12 se publicó hace 4 días.** Fijar un *major* de esa edad en un entregable que
+> **NestJS 12 se publicó hace 4 días.** Fijar un _major_ de esa edad en un entregable que
 > te van a evaluar es un riesgo innecesario por dos motivos independientes: la ventana de
 > cooldown y la ausencia de guías de migración maduras. **Se fija NestJS 11.2.1**, que es
 > la última de una rama estable y probada. Es una decisión que conviene explicar en el
-> README: elegir deliberadamente *no* la última demuestra criterio, no desactualización.
+> README: elegir deliberadamente _no_ la última demuestra criterio, no desactualización.
 
 > ⚠️ **`class-transformer` lleva 1743 días sin publicar** (última: 0.5.1, nov-2021). Es una
 > dependencia de facto de `class-validator` y del `ValidationPipe` de NestJS. No hay CVE
@@ -130,47 +130,49 @@ publicación; la columna **Pin** es la versión a fijar aplicando el cooldown de
 
 ### 1.2 Frontend
 
-| Paquete | Última | Edad | **Pin** |
-|---|---|---:|---|
-| `next` | 16.3.4 | 0d | **16.3.2** |
-| `react`, `react-dom` | 19.2.8 | 41d | **19.2.8** |
-| `@mui/material`, `@mui/material-nextjs` | 9.4.0 | 4d | **9.3.1 / 9.3.0** |
-| `@mui/x-data-grid`, `@mui/x-date-pickers` | 9.12.0 | 10d | **9.12.0** |
-| `@emotion/react` / `@emotion/styled` | 11.14.0 / 11.14.1 | 630d / 431d | **11.14.0 / 11.14.1** |
-| `@tanstack/react-query` | 5.102.8 | 4d | **5.102.3** |
-| `react-hook-form` | 7.87.0 | 2d | **7.86.0** |
-| `@hookform/resolvers` | 5.9.1 | 14d | **5.9.1** |
-| `zod` | 4.5.4 | 2d | **4.4.3** |
-| `openapi-typescript` / `openapi-fetch` | 7.13.0 / 0.17.0 | 201d | **7.13.0 / 0.17.0** |
-| `date-fns` / `@date-fns/tz` | 4.4.0 / 1.5.0 | 94d / 102d | **4.4.0 / 1.5.0** |
-| `better-auth` | 1.7.2 | 5d | **1.7.1** |
-| `vitest` | 4.1.11 | 13d | **4.1.11** |
-| `@vitejs/plugin-react` | 6.1.1 | 4d | **6.1.0** |
-| `@testing-library/react` | 16.3.3 | 4d | **16.3.2** |
-| `@testing-library/user-event` | 14.6.6 | 10d | **14.6.6** |
-| `@testing-library/jest-dom` | 7.0.1 | 22d | **7.0.1** |
-| `jsdom` | 30.0.1 | 34d | **30.0.1** |
-| `msw` | 2.15.0 | 55d | **2.15.0** |
-| `@playwright/test` | 1.62.1 | 32d | **1.62.1** |
-| `eslint-config-next` | 16.3.4 | 0d | **16.3.2** |
+| Paquete                                   | Última            |        Edad | **Pin**               |
+| ----------------------------------------- | ----------------- | ----------: | --------------------- |
+| `next`                                    | 16.3.4            |          0d | **16.3.2**            |
+| `react`, `react-dom`                      | 19.2.8            |         41d | **19.2.8**            |
+| `@mui/material`, `@mui/material-nextjs`   | 9.4.0             |          4d | **9.3.1 / 9.3.0**     |
+| `@mui/x-data-grid`, `@mui/x-date-pickers` | 9.12.0            |         10d | **9.12.0**            |
+| `@emotion/react` / `@emotion/styled`      | 11.14.0 / 11.14.1 | 630d / 431d | **11.14.0 / 11.14.1** |
+| `@tanstack/react-query`                   | 5.102.8           |          4d | **5.102.3**           |
+| `react-hook-form`                         | 7.87.0            |          2d | **7.86.0**            |
+| `@hookform/resolvers`                     | 5.9.1             |         14d | **5.9.1**             |
+| `zod`                                     | 4.5.4             |          2d | **4.4.3**             |
+| `openapi-typescript` / `openapi-fetch`    | 7.13.0 / 0.17.0   |        201d | **7.13.0 / 0.17.0**   |
+| `date-fns` / `@date-fns/tz`               | 4.4.0 / 1.5.0     |  94d / 102d | **4.4.0 / 1.5.0**     |
+| `better-auth`                             | 1.7.2             |          5d | **1.7.1**             |
+| `vitest`                                  | 4.1.11            |         13d | **4.1.11**            |
+| `@vitejs/plugin-react`                    | 6.1.1             |          4d | **6.1.0**             |
+| `@testing-library/react`                  | 16.3.3            |          4d | **16.3.2**            |
+| `@testing-library/user-event`             | 14.6.6            |         10d | **14.6.6**            |
+| `@testing-library/jest-dom`               | 7.0.1             |         22d | **7.0.1**             |
+| `jsdom`                                   | 30.0.1            |         34d | **30.0.1**            |
+| `msw`                                     | 2.15.0            |         55d | **2.15.0**            |
+| `@playwright/test`                        | 1.62.1            |         32d | **1.62.1**            |
+| `eslint-config-next`                      | 16.3.4            |          0d | **16.3.2**            |
 
 **Importante:** `better-auth` debe ser **exactamente la misma versión** en backend y
 frontend. El cliente y el servidor comparten tipos inferidos y formato de sesión.
 
 ### 1.3 Runtime e imágenes base
 
-| Componente | Versión | Verificación |
-|---|---|---|
-| Node.js | **24 LTS** (`node:24-alpine`) | Active LTS hasta 2028-04-30, según `nodejs/Release/schedule.json`. Node 26 es *Current*, no LTS. |
-| PostgreSQL | **18** (`postgres:18-alpine`) | 18.6 es la última estable (2026-08-11). PG 19 está en Beta 3: no se usa. |
-| Adminer | `adminer:5` | Solo en desarrollo. |
-| npm | **≥ 11.10.0** | Requisito para `min-release-age` (§2.3). |
+| Componente | Versión                       | Verificación                                                                                     |
+| ---------- | ----------------------------- | ------------------------------------------------------------------------------------------------ |
+| Node.js    | **24 LTS** (`node:24-alpine`) | Active LTS hasta 2028-04-30, según `nodejs/Release/schedule.json`. Node 26 es _Current_, no LTS. |
+| PostgreSQL | **18** (`postgres:18-alpine`) | 18.6 es la última estable (2026-08-11). PG 19 está en Beta 3: no se usa.                         |
+| Adminer    | `adminer:5`                   | Solo en desarrollo.                                                                              |
+| npm        | **≥ 11.10.0**                 | Requisito para `min-release-age` (§2.3).                                                         |
 
 > 🔴 **Cambio de ruta en PostgreSQL 18.** Verificado en el Dockerfile oficial:
+>
 > ```
 > ENV PGDATA /var/lib/postgresql/18/docker
 > VOLUME /var/lib/postgresql
 > ```
+>
 > Hasta PG 17 el volumen era `/var/lib/postgresql/data`. Un `docker-compose.yml` copiado de
 > cualquier tutorial anterior monta la ruta equivocada y **los datos no persisten entre
 > reinicios**. Los ficheros de §5 usan la ruta correcta.
@@ -179,9 +181,9 @@ frontend. El cliente y el servidor comparten tipos inferidos y formato de sesió
 
 ## 2. Seguridad de la cadena de suministro
 
-Los ataques a paquetes de npm dejaron de ser hipotéticos: el gusano *Shai-Hulud*
+Los ataques a paquetes de npm dejaron de ser hipotéticos: el gusano _Shai-Hulud_
 (nov-2025) llegó a 796 paquetes con 132 M de descargas mensuales combinadas, y solo en
-2026 se encadenaron *Glassworm*, la manipulación de `Trivy` v0.69.4, `LiteLLM` 1.82.7/8 y
+2026 se encadenaron _Glassworm_, la manipulación de `Trivy` v0.69.4, `LiteLLM` 1.82.7/8 y
 `axios` 1.14.1 / 0.30.4. Este apartado no es decorativo: es parte del diseño.
 
 ### 2.1 Qué se puede verificar de verdad, y qué no
@@ -189,14 +191,14 @@ Los ataques a paquetes de npm dejaron de ser hipotéticos: el gusano *Shai-Hulud
 Conviene ser preciso sobre el alcance, porque prometer más de lo que se puede comprobar es
 peor que no comprobar nada.
 
-| Se puede | No se puede |
-|---|---|
-| Consultar cada versión exacta contra bases de vulnerabilidades (OSV, GitHub Advisory). | Garantizar que un paquete limpio hoy no se comprometa mañana. |
-| Verificar firmas y procedencia (*provenance*) del registro. | Auditar manualmente el código de 900 dependencias transitivas. |
-| Bloquear los vectores conocidos (scripts de instalación, versiones recién publicadas). | Detectar un *zero-day* aún no reportado por nadie. |
-| Congelar el árbol completo con un lockfile e instalar solo desde él. | Afirmar "está libre de virus" con certeza absoluta. |
+| Se puede                                                                               | No se puede                                                    |
+| -------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
+| Consultar cada versión exacta contra bases de vulnerabilidades (OSV, GitHub Advisory). | Garantizar que un paquete limpio hoy no se comprometa mañana.  |
+| Verificar firmas y procedencia (_provenance_) del registro.                            | Auditar manualmente el código de 900 dependencias transitivas. |
+| Bloquear los vectores conocidos (scripts de instalación, versiones recién publicadas). | Detectar un _zero-day_ aún no reportado por nadie.             |
+| Congelar el árbol completo con un lockfile e instalar solo desde él.                   | Afirmar "está libre de virus" con certeza absoluta.            |
 
-La estrategia correcta no es *afirmar* que está limpio: es **reducir la ventana de
+La estrategia correcta no es _afirmar_ que está limpio: es **reducir la ventana de
 exposición** y **hacer el fallo detectable**.
 
 ### 2.2 Verificación ejecutada (2026-09-01)
@@ -217,20 +219,20 @@ script del repositorio:
   "scripts": {
     "audit:osv": "node scripts/osv-check.mjs",
     "audit:signatures": "npm audit signatures",
-    "audit:vulns": "npm audit --audit-level=high"
-  }
+    "audit:vulns": "npm audit --audit-level=high",
+  },
 }
 ```
 
 `npm audit signatures` verifica que cada tarball descargado coincide con la firma del
-registro y, cuando existe, con su atestación de procedencia (*provenance*): confirma que el
+registro y, cuando existe, con su atestación de procedencia (_provenance_): confirma que el
 paquete se construyó en el pipeline público que declara, no en el portátil de alguien.
 
 ### 2.3 Cooldown de dependencias — la defensa que sí habría parado los incidentes
 
 Los ataques reales duran poco. `axios` tuvo versiones maliciosas vivas ~3 horas
 (marzo 2026); `TanStack Router` se detectó en minutos y se deprecó en ~1,5 h. Instalar
-únicamente versiones con **al menos 7 días de vida** habría bloqueado *todos* los
+únicamente versiones con **al menos 7 días de vida** habría bloqueado _todos_ los
 incidentes de 2025–2026.
 
 `npm` incorporó `min-release-age` **en días** desde la versión 11.10.0 (febrero 2026):
@@ -263,24 +265,24 @@ fund=false
 
 ### 2.4 Capas restantes
 
-| Capa | Medida | Fichero |
-|---|---|---|
-| Instalación | `npm ci` siempre; nunca `npm install` en CI ni en Docker. | `Dockerfile`, CI |
-| Lockfile | `package-lock.json` versionado y revisado en cada PR. | repo |
-| Aislamiento | `--ignore-scripts` en todas las capas de build. | `Dockerfile` |
-| Imágenes | Tag y **digest** fijados en producción: `postgres:18-alpine@sha256:…` | `docker-compose.prod.yml` |
-| Escaneo de imagen | Trivy sobre la imagen final en CI, fallo con severidad ≥ HIGH. | `.github/workflows/ci.yml` |
-| SBOM | `docker buildx build --sbom=true --provenance=true`. | CI |
-| Runtime | Contenedor `read_only`, usuario no root, `cap_drop: [ALL]`, `no-new-privileges`. | `docker-compose.prod.yml` |
-| Actualizaciones | Dependabot con `cooldown` de 7 días alineado con `.npmrc`. | `.github/dependabot.yml` |
-| Secretos | Nunca en `docker-compose`; `secrets:` de Docker o el gestor del proveedor. | §5.3 |
+| Capa              | Medida                                                                           | Fichero                    |
+| ----------------- | -------------------------------------------------------------------------------- | -------------------------- |
+| Instalación       | `npm ci` siempre; nunca `npm install` en CI ni en Docker.                        | `Dockerfile`, CI           |
+| Lockfile          | `package-lock.json` versionado y revisado en cada PR.                            | repo                       |
+| Aislamiento       | `--ignore-scripts` en todas las capas de build.                                  | `Dockerfile`               |
+| Imágenes          | Tag y **digest** fijados en producción: `postgres:18-alpine@sha256:…`            | `docker-compose.prod.yml`  |
+| Escaneo de imagen | Trivy sobre la imagen final en CI, fallo con severidad ≥ HIGH.                   | `.github/workflows/ci.yml` |
+| SBOM              | `docker buildx build --sbom=true --provenance=true`.                             | CI                         |
+| Runtime           | Contenedor `read_only`, usuario no root, `cap_drop: [ALL]`, `no-new-privileges`. | `docker-compose.prod.yml`  |
+| Actualizaciones   | Dependabot con `cooldown` de 7 días alineado con `.npmrc`.                       | `.github/dependabot.yml`   |
+| Secretos          | Nunca en `docker-compose`; `secrets:` de Docker o el gestor del proveedor.       | §5.3                       |
 
 ```yaml
 # .github/dependabot.yml
 version: 2
 updates:
   - package-ecosystem: npm
-    directory: "/"
+    directory: '/'
     schedule: { interval: weekly }
     # Alineado con min-release-age del .npmrc: Dependabot no propone
     # una versión antes de que el ecosistema haya tenido tiempo de detectarla.
@@ -306,9 +308,9 @@ security:
       with: { node-version: '24', cache: npm }
 
     - run: npm ci --ignore-scripts
-    - run: npm run audit:signatures   # firmas y procedencia del registro
-    - run: npm run audit:vulns        # GitHub Advisory Database
-    - run: npm run audit:osv          # segunda fuente independiente
+    - run: npm run audit:signatures # firmas y procedencia del registro
+    - run: npm run audit:vulns # GitHub Advisory Database
+    - run: npm run audit:osv # segunda fuente independiente
 
     - uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
       with:
@@ -401,13 +403,13 @@ con puertos, tokens de inyección y entidades de dominio distintas de las de Typ
 **Se descartó deliberadamente**: para un sistema de este tamaño, esa ceremonia añade
 ficheros sin añadir garantías.
 
-| Se quitó | Por qué |
-|---|---|
-| Carpetas `domain/`, `application/`, `infrastructure/` | Tres niveles de anidación para dos módulos. La convención plana se navega mejor. |
+| Se quitó                                                                | Por qué                                                                                                                                                                                                |
+| ----------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Carpetas `domain/`, `application/`, `infrastructure/`                   | Tres niveles de anidación para dos módulos. La convención plana se navega mejor.                                                                                                                       |
 | Puertos + tokens (`RESERVATION_REPOSITORY`, `RESOURCE_READER`, `CLOCK`) | La clase `ReservationRepository` **ya es** la abstracción: los servicios nunca ven `Repository<T>` de TypeORM. Nest sustituye clases en los tests con `overrideProvider()` igual que sustituye tokens. |
-| Entidad de dominio + entidad ORM + mappers `toOrm`/`toDomain` | Duplica el modelo y obliga a mantener dos ficheros sincronizados. Una sola entidad de TypeORM. |
-| Abstracción `UnitOfWork` | `dataSource.transaction()` de TypeORM ya es esa abstracción, y es la que el equipo reconoce. |
-| Fachada tipo `orchestrator` | En un CRM grande da un punto de entrada único a los controllers; aquí solo añade un salto. |
+| Entidad de dominio + entidad ORM + mappers `toOrm`/`toDomain`           | Duplica el modelo y obliga a mantener dos ficheros sincronizados. Una sola entidad de TypeORM.                                                                                                         |
+| Abstracción `UnitOfWork`                                                | `dataSource.transaction()` de TypeORM ya es esa abstracción, y es la que el equipo reconoce.                                                                                                           |
+| Fachada tipo `orchestrator`                                             | En un CRM grande da un punto de entrada único a los controllers; aquí solo añade un salto.                                                                                                             |
 
 Resultado: **de ~38 ficheros a ~20** en el módulo de reservas, sin perder ninguna de las
 propiedades que importan &mdash;la invariante sigue en la base de datos, las reglas siguen
@@ -417,22 +419,22 @@ siendo abiertas a extensión y los tests siguen corriendo sin base de datos&mdas
 
 - **`period.vo.ts`** &mdash; ~40 líneas donde vive la semántica `[start, end)`. Función pura,
   se prueba sin base de datos y es el sitio único donde puede estar el bug de la frontera.
-- **`rules/`** &mdash; ocho clases pequeñas registradas como *multi-provider*. Es la
+- **`rules/`** &mdash; ocho clases pequeñas registradas como _multi-provider_. Es la
   demostración concreta del principio abierto/cerrado y no cuesta ninguna capa extra.
 - **`repositories/`** &mdash; la convención del CRM. Mantiene `QueryBuilder` fuera de los
   servicios, que es lo que la separación dominio/infraestructura buscaba de verdad.
 
 ### 3.2 Modelo de datos
 
-| Tabla | Campos relevantes | Papel |
-|---|---|---|
-| `resource_type` | `id`, `code` (único), `name`, `attributes_schema jsonb`, `is_active` | Familia reservable. El JSON Schema declara qué atributos exige el tipo. |
-| `resource` | `id`, `resource_type_id`, `code` (único), `name`, `capacity`, `location`, `time_zone`, `attributes jsonb`, `is_active`, `deactivated_at` | La unidad reservable. Baja lógica. |
-| `resource_availability` | `resource_id`, `day_of_week` (0–6), `start_time time`, `end_time time` | Ventana operativa semanal. Sin filas = 24/7. |
-| `resource_block` | `resource_id`, `start_at`, `end_at`, `period` (generada), `reason` | Mantenimiento, festivo, avería. |
-| `reservation` | ver §3.3 | El núcleo. Aquí vive la constraint de exclusión. |
-| `user_profile` | `user_id` (PK, FK → `user`), `active_reservation_limit`, `department` | Extiende Better Auth sin tocar sus tablas. |
-| `user`, `session`, `account`, `verification` | gestionadas por Better Auth | Identidad y sesiones. |
+| Tabla                                        | Campos relevantes                                                                                                                        | Papel                                                                   |
+| -------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| `resource_type`                              | `id`, `code` (único), `name`, `attributes_schema jsonb`, `is_active`                                                                     | Familia reservable. El JSON Schema declara qué atributos exige el tipo. |
+| `resource`                                   | `id`, `resource_type_id`, `code` (único), `name`, `capacity`, `location`, `time_zone`, `attributes jsonb`, `is_active`, `deactivated_at` | La unidad reservable. Baja lógica.                                      |
+| `resource_availability`                      | `resource_id`, `day_of_week` (0–6), `start_time time`, `end_time time`                                                                   | Ventana operativa semanal. Sin filas = 24/7.                            |
+| `resource_block`                             | `resource_id`, `start_at`, `end_at`, `period` (generada), `reason`                                                                       | Mantenimiento, festivo, avería.                                         |
+| `reservation`                                | ver §3.3                                                                                                                                 | El núcleo. Aquí vive la constraint de exclusión.                        |
+| `user_profile`                               | `user_id` (PK, FK → `user`), `active_reservation_limit`, `department`                                                                    | Extiende Better Auth sin tocar sus tablas.                              |
+| `user`, `session`, `account`, `verification` | gestionadas por Better Auth                                                                                                              | Identidad y sesiones.                                                   |
 
 **Estados:** `CONFIRMED` (inicial, sin flujo de aprobación), `CANCELLED` (terminal, libera
 el hueco), `COMPLETED` (asignado cuando `end_at < now()`). **Solo `CONFIRMED` entra en la
@@ -511,28 +513,28 @@ readonly period!: string;
 
 Referencia: una reserva `CONFIRMED` de **10:00 a 11:00**.
 
-| Caso | Candidata | ¿Conflicto? | Por qué |
-|---|---|---|---|
-| a · justo antes | 09:00 – 10:00 | ❌ **no** | Frontera: `end == start`. Con `[)` no solapa. |
-| b · justo después | 11:00 – 12:00 | ❌ **no** | Frontera: `start == end`. Con `[)` no solapa. |
-| c · pisa el inicio | 09:30 – 10:30 | ✅ sí | Solape parcial. |
-| d · pisa el final | 10:30 – 11:30 | ✅ sí | Solape parcial. |
-| e · contenida | 10:15 – 10:45 | ✅ sí | Dentro de la existente. |
-| f · envolvente | 09:30 – 11:30 | ✅ sí | Contiene a la existente. |
-| g · idéntica | 10:00 – 11:00 | ✅ sí | Coincidencia exacta. |
+| Caso               | Candidata     | ¿Conflicto? | Por qué                                       |
+| ------------------ | ------------- | ----------- | --------------------------------------------- |
+| a · justo antes    | 09:00 – 10:00 | ❌ **no**   | Frontera: `end == start`. Con `[)` no solapa. |
+| b · justo después  | 11:00 – 12:00 | ❌ **no**   | Frontera: `start == end`. Con `[)` no solapa. |
+| c · pisa el inicio | 09:30 – 10:30 | ✅ sí       | Solape parcial.                               |
+| d · pisa el final  | 10:30 – 11:30 | ✅ sí       | Solape parcial.                               |
+| e · contenida      | 10:15 – 10:45 | ✅ sí       | Dentro de la existente.                       |
+| f · envolvente     | 09:30 – 11:30 | ✅ sí       | Contiene a la existente.                      |
+| g · idéntica       | 10:00 – 11:00 | ✅ sí       | Coincidencia exacta.                          |
 
 Los casos **a** y **b** son los que separan una implementación cuidadosa de una ingenua.
 Esta tabla se convierte literalmente en un test parametrizado (§6.1).
 
 #### Tres capas de defensa
 
-| # | Capa | Rol | Respuesta |
-|---|---|---|---|
-| 1 | `Period` value object | Rechaza `end ≤ start`, duración fuera de rango, granularidad inválida. Función pura, sin BD. | 422 |
-| 2 | Advisory lock + consulta en transacción | Produce un **error útil**: qué reserva choca y a qué hora. | 409 con detalle |
-| 3 | Constraint `EXCLUDE` de PostgreSQL | La última palabra. Si algo esquiva las capas anteriores, la BD rechaza el `INSERT`. | 409 genérico |
+| #   | Capa                                    | Rol                                                                                          | Respuesta       |
+| --- | --------------------------------------- | -------------------------------------------------------------------------------------------- | --------------- |
+| 1   | `Period` value object                   | Rechaza `end ≤ start`, duración fuera de rango, granularidad inválida. Función pura, sin BD. | 422             |
+| 2   | Advisory lock + consulta en transacción | Produce un **error útil**: qué reserva choca y a qué hora.                                   | 409 con detalle |
+| 3   | Constraint `EXCLUDE` de PostgreSQL      | La última palabra. Si algo esquiva las capas anteriores, la BD rechaza el `INSERT`.          | 409 genérico    |
 
-> **Por qué las tres.** La constraint sola bastaría para *garantizar* la invariante, pero
+> **Por qué las tres.** La constraint sola bastaría para _garantizar_ la invariante, pero
 > devolvería un error opaco. La capa 2 existe para la calidad del mensaje, no para la
 > corrección. Y la capa 2 sola sería incorrecta con más de una instancia de la API. Se
 > necesitan las dos por razones distintas: **corrección abajo, ergonomía arriba**.
@@ -645,7 +647,7 @@ const rules = [
   AllowedDurationRule,
   WithinOperatingHoursRule,
   NoResourceBlockRule,
-  NoOverlapRule,          // <- la regla central
+  NoOverlapRule, // <- la regla central
   SufficientCapacityRule,
   ActiveReservationLimitRule,
 ];
@@ -669,16 +671,16 @@ const rules = [
 export class ReservationsModule {}
 ```
 
-| Regla | Qué comprueba | Código de error | HTTP |
-|---|---|---|---:|
-| `ResourceIsActiveRule` | El recurso existe y no está dado de baja. | `RESOURCE_UNAVAILABLE` | 409 |
-| `NotInThePastRule` | `startAt ≥ now` (1 min de tolerancia de reloj). | `RESERVATION_IN_PAST` | 422 |
-| `AllowedDurationRule` | Entre 15 min y 8 h, en múltiplos de 15 min. | `INVALID_DURATION` | 422 |
-| `WithinOperatingHoursRule` | Cae dentro del horario semanal, en la TZ del recurso. | `OUTSIDE_OPERATING_HOURS` | 409 |
-| `NoResourceBlockRule` | No se cruza con mantenimiento ni festivo. | `RESOURCE_BLOCKED` | 409 |
-| **`NoOverlapRule`** | Ninguna reserva `CONFIRMED` cruza el periodo. **La regla central.** | `OVERLAPPING_RESERVATION` | 409 |
-| `SufficientCapacityRule` | `attendees ≤ resource.capacity`. | `CAPACITY_EXCEEDED` | 422 |
-| `ActiveReservationLimitRule` | El usuario no supera su tope de reservas futuras. | `RESERVATION_LIMIT_REACHED` | 409 |
+| Regla                        | Qué comprueba                                                       | Código de error             | HTTP |
+| ---------------------------- | ------------------------------------------------------------------- | --------------------------- | ---: |
+| `ResourceIsActiveRule`       | El recurso existe y no está dado de baja.                           | `RESOURCE_UNAVAILABLE`      |  409 |
+| `NotInThePastRule`           | `startAt ≥ now` (1 min de tolerancia de reloj).                     | `RESERVATION_IN_PAST`       |  422 |
+| `AllowedDurationRule`        | Entre 15 min y 8 h, en múltiplos de 15 min.                         | `INVALID_DURATION`          |  422 |
+| `WithinOperatingHoursRule`   | Cae dentro del horario semanal, en la TZ del recurso.               | `OUTSIDE_OPERATING_HOURS`   |  409 |
+| `NoResourceBlockRule`        | No se cruza con mantenimiento ni festivo.                           | `RESOURCE_BLOCKED`          |  409 |
+| **`NoOverlapRule`**          | Ninguna reserva `CONFIRMED` cruza el periodo. **La regla central.** | `OVERLAPPING_RESERVATION`   |  409 |
+| `SufficientCapacityRule`     | `attendees ≤ resource.capacity`.                                    | `CAPACITY_EXCEEDED`         |  422 |
+| `ActiveReservationLimitRule` | El usuario no supera su tope de reservas futuras.                   | `RESERVATION_LIMIT_REACHED` |  409 |
 
 ```ts
 // reservations/rules/no-overlap.rule.ts
@@ -740,29 +742,29 @@ exhaustivamente, y esta es una función que tiene que ser correcta en los bordes
 Prefijo `/api/v1`. Documentado con `@nestjs/swagger` en `/api/docs`; el JSON de OpenAPI es
 además la fuente de los tipos del frontend (§4.2).
 
-| Método y ruta | Acceso | Qué hace | Respuestas |
-|---|---|---|---|
-| **Catálogo** | | | |
-| `GET /resource-types` | sesión | Lista los tipos con su esquema de atributos. | 200 |
-| `POST /resource-types` | admin | Crea un tipo. Valida que `attributes_schema` sea JSON Schema válido. | 201 · 409 |
-| `POST /resources` | admin | Crea un recurso; `attributes` se valida contra el esquema del tipo. | 201 · 422 · 409 |
-| `GET /resources` | sesión | Paginado. Filtros: `typeId`, `q`, `minCapacity`, `isActive`, `location`. | 200 |
-| `GET /resources/:id` | sesión | Detalle con disponibilidad y bloqueos vigentes. | 200 · 404 |
-| `PATCH /resources/:id` | admin | Actualización parcial. | 200 · 404 · 422 |
-| `DELETE /resources/:id` | admin | **Baja lógica.** Rechaza si hay reservas futuras, salvo `?force=true`. | 204 · 409 |
-| `PUT /resources/:id/availability` | admin | Reemplaza la ventana semanal completa. | 200 · 422 |
-| `POST /resources/:id/blocks` | admin | Registra mantenimiento o cierre. | 201 · 409 |
-| **Disponibilidad y reservas** | | | |
-| `GET /resources/:id/availability` | sesión | Huecos libres. `from`, `to` (máx. 60 días), `minDurationMinutes`. | 200 · 422 |
-| `POST /reservations` | sesión | **Crea una reserva.** Acepta cabecera `Idempotency-Key`. | 201 · **409 solape** · 422 |
-| `GET /reservations` | sesión | Listado con filtros y paginación. Sin rol admin, solo las propias. | 200 |
-| `GET /reservations/:id` | sesión | Detalle con recurso y usuario embebidos. | 200 · 403 · 404 |
-| `PATCH /reservations/:id` | dueño | Reprograma. Reejecuta *todas* las reglas excluyéndose a sí misma. | 200 · 409 · 422 |
-| `POST /reservations/:id/cancellation` | dueño | **Cancela** con motivo. Idempotente. | 200 · 403 · 409 |
-| **Sistema** | | | |
-| `ALL /api/auth/*` | público | Gestionado por Better Auth. | — |
-| `GET /health` | público | Liveness y readiness con `@nestjs/terminus`. | 200 · 503 |
-| `GET /api/docs` | público | Swagger UI. | 200 |
+| Método y ruta                         | Acceso  | Qué hace                                                                 | Respuestas                 |
+| ------------------------------------- | ------- | ------------------------------------------------------------------------ | -------------------------- |
+| **Catálogo**                          |         |                                                                          |                            |
+| `GET /resource-types`                 | sesión  | Lista los tipos con su esquema de atributos.                             | 200                        |
+| `POST /resource-types`                | admin   | Crea un tipo. Valida que `attributes_schema` sea JSON Schema válido.     | 201 · 409                  |
+| `POST /resources`                     | admin   | Crea un recurso; `attributes` se valida contra el esquema del tipo.      | 201 · 422 · 409            |
+| `GET /resources`                      | sesión  | Paginado. Filtros: `typeId`, `q`, `minCapacity`, `isActive`, `location`. | 200                        |
+| `GET /resources/:id`                  | sesión  | Detalle con disponibilidad y bloqueos vigentes.                          | 200 · 404                  |
+| `PATCH /resources/:id`                | admin   | Actualización parcial.                                                   | 200 · 404 · 422            |
+| `DELETE /resources/:id`               | admin   | **Baja lógica.** Rechaza si hay reservas futuras, salvo `?force=true`.   | 204 · 409                  |
+| `PUT /resources/:id/availability`     | admin   | Reemplaza la ventana semanal completa.                                   | 200 · 422                  |
+| `POST /resources/:id/blocks`          | admin   | Registra mantenimiento o cierre.                                         | 201 · 409                  |
+| **Disponibilidad y reservas**         |         |                                                                          |                            |
+| `GET /resources/:id/availability`     | sesión  | Huecos libres. `from`, `to` (máx. 60 días), `minDurationMinutes`.        | 200 · 422                  |
+| `POST /reservations`                  | sesión  | **Crea una reserva.** Acepta cabecera `Idempotency-Key`.                 | 201 · **409 solape** · 422 |
+| `GET /reservations`                   | sesión  | Listado con filtros y paginación. Sin rol admin, solo las propias.       | 200                        |
+| `GET /reservations/:id`               | sesión  | Detalle con recurso y usuario embebidos.                                 | 200 · 403 · 404            |
+| `PATCH /reservations/:id`             | dueño   | Reprograma. Reejecuta _todas_ las reglas excluyéndose a sí misma.        | 200 · 409 · 422            |
+| `POST /reservations/:id/cancellation` | dueño   | **Cancela** con motivo. Idempotente.                                     | 200 · 403 · 409            |
+| **Sistema**                           |         |                                                                          |                            |
+| `ALL /api/auth/*`                     | público | Gestionado por Better Auth.                                              | —                          |
+| `GET /health`                         | público | Liveness y readiness con `@nestjs/terminus`.                             | 200 · 503                  |
+| `GET /api/docs`                       | público | Swagger UI.                                                              | 200                        |
 
 **Cancelar es `POST /reservations/:id/cancellation`, no `DELETE`.** Cancelar no borra: es
 una transición de estado que registra quién, cuándo y por qué. Modelarla como creación de
@@ -814,8 +816,8 @@ Content-Type: application/problem+json
 ```jsonc
 // Sobre de paginación — idéntico en los tres listados
 {
-  "data": [ /* ... */ ],
-  "meta": { "page": 1, "limit": 20, "total": 137, "totalPages": 7 }
+  "data": [/* ... */],
+  "meta": { "page": 1, "limit": 20, "total": 137, "totalPages": 7 },
 }
 ```
 
@@ -868,9 +870,9 @@ export function setupSwagger(app: INestApplication): void {
   const document = SwaggerModule.createDocument(app, config);
 
   SwaggerModule.setup('api/docs', app, document, {
-    jsonDocumentUrl: 'api/docs-json',   // lo consume openapi-typescript
+    jsonDocumentUrl: 'api/docs-json', // lo consume openapi-typescript
     swaggerOptions: {
-      persistAuthorization: true,       // la sesión sobrevive al recargar la UI
+      persistAuthorization: true, // la sesión sobrevive al recargar la UI
       tagsSorter: 'alpha',
       operationsSorter: 'alpha',
     },
@@ -892,13 +894,13 @@ export function setupSwagger(app: INestApplication): void {
       {
         "name": "@nestjs/swagger",
         "options": {
-          "introspectComments": true,   // el comentario /** */ pasa a description
+          "introspectComments": true, // el comentario /** */ pasa a description
           "dtoFileNameSuffix": [".dto.ts"],
-          "classValidatorShim": true    // @IsInt() -> type: integer, etc.
-        }
-      }
-    ]
-  }
+          "classValidatorShim": true, // @IsInt() -> type: integer, etc.
+        },
+      },
+    ],
+  },
 }
 ```
 
@@ -1029,10 +1031,10 @@ main();
 Better Auth es una buena elección, pero introduce dos riesgos distintos que conviene no
 confundir:
 
-| Riesgo | Gravedad | Origen |
-|---|---|---|
-| **A.** `@thallesp/nestjs-better-auth` es un paquete comunitario, no oficial | Media | Una dependencia de terceros en la ruta de autenticación |
-| **B.** Los tipos y decoradores del proveedor se filtran a todo el código | **Alta** | Diseño propio, no del proveedor |
+| Riesgo                                                                      | Gravedad | Origen                                                  |
+| --------------------------------------------------------------------------- | -------- | ------------------------------------------------------- |
+| **A.** `@thallesp/nestjs-better-auth` es un paquete comunitario, no oficial | Media    | Una dependencia de terceros en la ruta de autenticación |
+| **B.** Los tipos y decoradores del proveedor se filtran a todo el código    | **Alta** | Diseño propio, no del proveedor                         |
 
 El riesgo B es el caro. Si `typeof auth.$Infer.Session` aparece en quince controladores y
 el `@Session()` del paquete comunitario en treinta endpoints, cambiar de proveedor
@@ -1042,7 +1044,7 @@ en Better Auth obliga a ello.
 #### El patrón: Adapter sobre un puerto estrecho
 
 El patrón de diseño correcto es **Adapter**, apoyado en una **capa anticorrupción**
-(*Anti-Corruption Layer*, del DDD) y con **Strategy** para elegir implementación en el
+(_Anti-Corruption Layer_, del DDD) y con **Strategy** para elegir implementación en el
 arranque. Traducido a algo concreto: **una interfaz de dos métodos, y un contrato de
 tipo propio que ningún tipo del proveedor cruza.**
 
@@ -1124,7 +1126,7 @@ export class BetterAuthProvider implements AuthProvider {
   }
 
   getRequestHandler(): RequestHandler {
-    return toNodeHandler(auth);   // de 'better-auth/node', no del paquete comunitario
+    return toNodeHandler(auth); // de 'better-auth/node', no del paquete comunitario
   }
 }
 ```
@@ -1164,7 +1166,7 @@ export class AuthenticationGuard implements CanActivate {
     const user = await this.provider.authenticate(toWebHeaders(request.headers));
 
     if (isPublic) {
-      request.user = user ?? undefined;   // opcional: si hay sesión, se usa
+      request.user = user ?? undefined; // opcional: si hay sesión, se usa
       return true;
     }
     if (!user) throw new UnauthorizedException('Sesión no válida o expirada');
@@ -1180,8 +1182,7 @@ export class AuthenticationGuard implements CanActivate {
 ```ts
 // auth/decorators/
 export const CurrentUser = createParamDecorator(
-  (_: unknown, ctx: ExecutionContext): AuthenticatedUser =>
-    ctx.switchToHttp().getRequest().user,
+  (_: unknown, ctx: ExecutionContext): AuthenticatedUser => ctx.switchToHttp().getRequest().user,
 );
 
 export const Public = () => SetMetadata(IS_PUBLIC, true);
@@ -1227,11 +1228,7 @@ export class AuthModule {
     return {
       module: AuthModule,
       controllers: [AuthController],
-      providers: [
-        { provide: AUTH_PROVIDER, useClass },
-        AuthenticationGuard,
-        RolesGuard,
-      ],
+      providers: [{ provide: AUTH_PROVIDER, useClass }, AuthenticationGuard, RolesGuard],
       // Se exportan el token y los guards. NUNCA el objeto `auth`.
       exports: [AUTH_PROVIDER, AuthenticationGuard, RolesGuard],
     };
@@ -1268,12 +1265,12 @@ testAuthProviderContract('jwt',         () => buildJwtProvider());
 
 #### El coste real de sustituir Better Auth
 
-| Qué cambia | Ficheros |
-|---|---|
-| Nueva implementación de `AuthProvider` | 1 nuevo |
-| Registrarla en el mapa de `AuthModule.forRoot()` | 1 línea |
-| Migración de datos del esquema de identidad | 1 migración |
-| **Controladores, servicios, reglas, guards, decoradores, DTOs** | **0** |
+| Qué cambia                                                      | Ficheros    |
+| --------------------------------------------------------------- | ----------- |
+| Nueva implementación de `AuthProvider`                          | 1 nuevo     |
+| Registrarla en el mapa de `AuthModule.forRoot()`                | 1 línea     |
+| Migración de datos del esquema de identidad                     | 1 migración |
+| **Controladores, servicios, reglas, guards, decoradores, DTOs** | **0**       |
 
 Los tests de contrato ya existentes validan la implementación nueva antes de activarla.
 
@@ -1299,13 +1296,15 @@ const app = await NestFactory.create(AppModule, { bodyParser: false });
 
 app.enableCors({ origin: process.env.FRONTEND_URL, credentials: true });
 app.setGlobalPrefix('api/v1', { exclude: ['api/auth/(.*)', 'health'] });
-app.useGlobalPipes(new ValidationPipe({
-  whitelist: true,
-  forbidNonWhitelisted: true,   // mitiga class-transformer sin mantenimiento (§1.1)
-  transform: true,
-}));
+app.useGlobalPipes(
+  new ValidationPipe({
+    whitelist: true,
+    forbidNonWhitelisted: true, // mitiga class-transformer sin mantenimiento (§1.1)
+    transform: true,
+  }),
+);
 app.useGlobalFilters(new ProblemDetailsFilter());
-setupSwagger(app);              // §3.9
+setupSwagger(app); // §3.9
 ```
 
 ### 3.11 SOLID, fichero a fichero
@@ -1314,13 +1313,13 @@ Aplicado con la estructura modular, sin capas extra. El punto de esta tabla es q
 principio se cumple por una decisión **concreta y localizable**, no por la forma del árbol
 de carpetas.
 
-| Principio | Dónde vive | Qué se gana |
-|---|---|---|
-| **S** · Responsabilidad única | Servicios separados por responsabilidad, como en el CRM: `ReservationService` (escrituras), `AvailabilityService` (cálculo de huecos), `ReservationLockService` (concurrencia). `Period` solo sabe de rangos; el repositorio solo persiste. | Ningún fichero pasa de ~150 líneas. Cuando algo falla, el sitio donde mirar es obvio. |
-| **O** · Abierto/cerrado | `ReservationRule` + multi-provider. Y `resource_type.attributes_schema`, que permite un tipo de recurso nuevo sin desplegar código. | "Máximo 2 reservas por día" = una clase nueva y una línea en el array. `ReservationService` no se toca. |
-| **L** · Sustitución de Liskov | `ReservationRepository` es una clase concreta que en los tests unitarios se sustituye con `overrideProvider(ReservationRepository).useClass(InMemoryReservationRepository)`. Ambas pasan el mismo contract test. | Los tests de reglas corren en milisegundos sin base de datos, y la fake no puede desviarse del contrato sin que salte una prueba. |
-| **I** · Segregación de interfaces | `ReservationRule` expone **un solo método**, `check()`. Los servicios de `reservations` consumen `ResourceRepository` con métodos de lectura, no el `ResourceService` completo. | Una regla no puede hacer nada más que validar. La superficie mínima es la que se puede probar exhaustivamente. |
-| **D** · Inversión de dependencias | Los servicios dependen de `ReservationRepository`, **nunca de `Repository<Reservation>` de TypeORM**: el `QueryBuilder` no sale de la carpeta `repositories/`. `ClockService` hace el tiempo inyectable. | Cambiar de ORM toca una carpeta. "No reservar en el pasado" se prueba de forma determinista con un reloj fijo, sin `jest.useFakeTimers`. |
+| Principio                         | Dónde vive                                                                                                                                                                                                                                  | Qué se gana                                                                                                                              |
+| --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| **S** · Responsabilidad única     | Servicios separados por responsabilidad, como en el CRM: `ReservationService` (escrituras), `AvailabilityService` (cálculo de huecos), `ReservationLockService` (concurrencia). `Period` solo sabe de rangos; el repositorio solo persiste. | Ningún fichero pasa de ~150 líneas. Cuando algo falla, el sitio donde mirar es obvio.                                                    |
+| **O** · Abierto/cerrado           | `ReservationRule` + multi-provider. Y `resource_type.attributes_schema`, que permite un tipo de recurso nuevo sin desplegar código.                                                                                                         | "Máximo 2 reservas por día" = una clase nueva y una línea en el array. `ReservationService` no se toca.                                  |
+| **L** · Sustitución de Liskov     | `ReservationRepository` es una clase concreta que en los tests unitarios se sustituye con `overrideProvider(ReservationRepository).useClass(InMemoryReservationRepository)`. Ambas pasan el mismo contract test.                            | Los tests de reglas corren en milisegundos sin base de datos, y la fake no puede desviarse del contrato sin que salte una prueba.        |
+| **I** · Segregación de interfaces | `ReservationRule` expone **un solo método**, `check()`. Los servicios de `reservations` consumen `ResourceRepository` con métodos de lectura, no el `ResourceService` completo.                                                             | Una regla no puede hacer nada más que validar. La superficie mínima es la que se puede probar exhaustivamente.                           |
+| **D** · Inversión de dependencias | Los servicios dependen de `ReservationRepository`, **nunca de `Repository<Reservation>` de TypeORM**: el `QueryBuilder` no sale de la carpeta `repositories/`. `ClockService` hace el tiempo inyectable.                                    | Cambiar de ORM toca una carpeta. "No reservar en el pasado" se prueba de forma determinista con un reloj fijo, sin `jest.useFakeTimers`. |
 
 > **Sobre DIP sin tokens.** La versión anterior de este diseño usaba tokens de inyección
 > (`@Inject(RESERVATION_REPOSITORY)`) contra interfaces. Se descartó porque en NestJS
@@ -1338,7 +1337,7 @@ de carpetas.
 > segunda implementación real o previsible.
 
 Dos principios más que sostienen el resto: **hacer imposibles los estados inválidos**
-(`Period` no se construye con `end ≤ start`; una reserva con solape no se puede *guardar*)
+(`Period` no se construye con `end ≤ start`; una reserva con solape no se puede _guardar_)
 y **separar comandos de consultas** (los listados usan `QueryBuilder`; las escrituras pasan
 por el dominio).
 
@@ -1399,7 +1398,10 @@ src/
 ```ts
 // src/lib/api/client.ts — el único punto que habla HTTP
 export class ApiError extends Error {
-  constructor(readonly problem: ProblemDetails, readonly status: number) {
+  constructor(
+    readonly problem: ProblemDetails,
+    readonly status: number,
+  ) {
     super(problem.detail ?? problem.title);
   }
 }
@@ -1407,7 +1409,7 @@ export class ApiError extends Error {
 export async function api<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`${API_BASE_URL}${path}`, {
     ...init,
-    credentials: 'include',   // la sesión de Better Auth viaja por cookie
+    credentials: 'include', // la sesión de Better Auth viaja por cookie
     headers: { 'Content-Type': 'application/json', ...init?.headers },
   });
 
@@ -1422,13 +1424,13 @@ y `['availability', resourceId]`, nunca todo el caché.
 
 ### 4.3 Pantallas
 
-| Ruta | Qué demuestra | Componentes MUI |
-|---|---|---|
-| `/login` | Sesión con Better Auth: registro y acceso. | `Card`, `TextField`, `Button`, `Alert` |
-| `/resources` | CRUD completo y filtros. Los atributos variables se renderizan desde el JSON Schema. | `DataGrid`, `Dialog`, `Autocomplete`, `Chip` |
-| `/resources/[id]` | **Disponibilidad**: selector de semana y huecos libres. Reservar desde un hueco. | `DateCalendar`, `Paper`, `Skeleton` |
-| `/reservations` | **Los cuatro filtros y paginación del servidor.** Cancelar con motivo. | `DataGrid` en modo servidor, `DateRangePicker`, `Select` |
-| `/schedule` | Rejilla semanal de un recurso. Hace el solapamiento *visible*. | CSS Grid + `Tooltip`, `ToggleButtonGroup` |
+| Ruta              | Qué demuestra                                                                        | Componentes MUI                                          |
+| ----------------- | ------------------------------------------------------------------------------------ | -------------------------------------------------------- |
+| `/login`          | Sesión con Better Auth: registro y acceso.                                           | `Card`, `TextField`, `Button`, `Alert`                   |
+| `/resources`      | CRUD completo y filtros. Los atributos variables se renderizan desde el JSON Schema. | `DataGrid`, `Dialog`, `Autocomplete`, `Chip`             |
+| `/resources/[id]` | **Disponibilidad**: selector de semana y huecos libres. Reservar desde un hueco.     | `DateCalendar`, `Paper`, `Skeleton`                      |
+| `/reservations`   | **Los cuatro filtros y paginación del servidor.** Cancelar con motivo.               | `DataGrid` en modo servidor, `DateRangePicker`, `Select` |
+| `/schedule`       | Rejilla semanal de un recurso. Hace el solapamiento _visible_.                       | CSS Grid + `Tooltip`, `ToggleButtonGroup`                |
 
 Cada vista resuelve sus cuatro estados: cargando (`Skeleton`, no un spinner), vacío (con
 acción sugerida), error (con reintentar) y con datos.
@@ -1439,7 +1441,7 @@ acción sugerida), error (con reintentar) y con datos.
    y pinta los huecos que devuelve `GET /availability`. Pulsar un hueco rellena inicio y
    fin. La mayoría de conflictos desaparece antes de existir.
 2. **Validar en el cliente solo la forma.** `react-hook-form` + `zod` replican las reglas
-   *de forma* (fin > inicio, duración, no en el pasado). Las de negocio se quedan en el
+   _de forma_ (fin > inicio, duración, no en el pasado). Las de negocio se quedan en el
    servidor: duplicarlas sería garantizar que se desincronizan.
 3. **Convertir el 409 en algo útil.** Si otra persona reservó mientras tanto, el campo
    `conflict` del Problem Details se traduce en un `Alert` con el horario exacto que choca,
@@ -1511,15 +1513,15 @@ services:
       POSTGRES_USER: reservations
       POSTGRES_PASSWORD: reservations
       POSTGRES_DB: reservations
-      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C.UTF-8"
-    ports: ["5432:5432"]
+      POSTGRES_INITDB_ARGS: '--encoding=UTF8 --locale=C.UTF-8'
+    ports: ['5432:5432']
     volumes:
       # PostgreSQL 18: el VOLUME es /var/lib/postgresql, NO /var/lib/postgresql/data.
       # PGDATA por defecto es /var/lib/postgresql/18/docker.
       - postgres-data:/var/lib/postgresql
       - ./docker/postgres/init:/docker-entrypoint-initdb.d:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U reservations -d reservations"]
+      test: ['CMD-SHELL', 'pg_isready -U reservations -d reservations']
       interval: 5s
       timeout: 3s
       retries: 10
@@ -1531,21 +1533,21 @@ services:
       postgres: { condition: service_healthy }
     environment:
       NODE_ENV: development
-      PORT: "3000"
+      PORT: '3000'
       DATABASE_URL: postgres://reservations:reservations@postgres:5432/reservations
       BETTER_AUTH_SECRET: dev-only-secret-not-for-production-32ch
       BETTER_AUTH_URL: http://localhost:3000
       FRONTEND_URL: http://localhost:3001
-    ports: ["3000:3000", "9229:9229"]
+    ports: ['3000:3000', '9229:9229']
     volumes:
       - ./src:/app/src
       - ./test:/app/test
-      - /app/node_modules          # los del contenedor no se pisan con los del host
+      - /app/node_modules # los del contenedor no se pisan con los del host
     command: npm run start:dev
 
   adminer:
     image: adminer:5
-    ports: ["8080:8080"]
+    ports: ['8080:8080']
     depends_on: [postgres]
 
 volumes:
@@ -1626,11 +1628,11 @@ x-hardening: &hardening
   restart: unless-stopped
   read_only: true
   tmpfs: [/tmp]
-  security_opt: ["no-new-privileges:true"]
+  security_opt: ['no-new-privileges:true']
   cap_drop: [ALL]
   logging:
     driver: json-file
-    options: { max-size: "10m", max-file: "3" }
+    options: { max-size: '10m', max-file: '3' }
 
 services:
   postgres:
@@ -1643,16 +1645,16 @@ services:
       POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
     secrets: [postgres_password]
     volumes:
-      - postgres-data:/var/lib/postgresql     # ruta de PG 18
+      - postgres-data:/var/lib/postgresql # ruta de PG 18
     # Sin `ports`: solo accesible desde la red interna.
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}']
       interval: 10s
       timeout: 5s
       retries: 5
     deploy:
       resources:
-        limits: { cpus: "1.0", memory: 1G }
+        limits: { cpus: '1.0', memory: 1G }
 
   api:
     <<: *hardening
@@ -1661,16 +1663,16 @@ services:
       postgres: { condition: service_healthy }
     environment:
       NODE_ENV: production
-      PORT: "3000"
+      PORT: '3000'
       DATABASE_URL: postgres://${POSTGRES_USER}@postgres:5432/${POSTGRES_DB}
       FRONTEND_URL: ${FRONTEND_URL}
       BETTER_AUTH_URL: ${API_PUBLIC_URL}
     secrets: [better_auth_secret, postgres_password]
-    ports: ["3000:3000"]
+    ports: ['3000:3000']
     deploy:
-      replicas: 2          # la constraint EXCLUDE hace esto seguro (§3.4)
+      replicas: 2 # la constraint EXCLUDE hace esto seguro (§3.4)
       resources:
-        limits: { cpus: "1.0", memory: 512M }
+        limits: { cpus: '1.0', memory: 512M }
 
 secrets:
   postgres_password: { file: ./secrets/postgres_password.txt }
@@ -1698,7 +1700,7 @@ networks:
 import type { NextConfig } from 'next';
 
 const config: NextConfig = {
-  output: 'standalone',        // imprescindible para una imagen Docker pequeña
+  output: 'standalone', // imprescindible para una imagen Docker pequeña
   reactStrictMode: true,
   poweredByHeader: false,
 };
@@ -1767,7 +1769,7 @@ services:
     environment:
       NEXT_PUBLIC_API_URL: http://localhost:3000
       NODE_ENV: development
-    ports: ["3001:3001"]
+    ports: ['3001:3001']
     volumes:
       - ./src:/app/src
       - ./public:/app/public
@@ -1777,7 +1779,7 @@ services:
 networks:
   default:
     name: reservations-net
-    external: true      # se une a la red que crea el compose del backend
+    external: true # se une a la red que crea el compose del backend
 ```
 
 ### 5.4 Comandos
@@ -1831,26 +1833,26 @@ mensaje de commit  →  commitlint  →  commit-and-tag-version  →  CHANGELOG.
    (Conventional)     (lo valida)      (deriva la versión)         (lo publica CI)
 ```
 
-| Fichero | Papel |
-|---|---|
-| `commitlint.config.mjs` | Valida el mensaje contra Conventional Commits, con `scope-enum` limitado a los módulos reales del proyecto. |
-| `.husky/commit-msg` | Ejecuta `commitlint` en cada commit local. |
-| `.husky/pre-commit` | Ejecuta `lint-staged` sobre lo que está en el índice. |
-| `.versionrc.json` | Configura qué tipos de commit aparecen en el changelog y con qué títulos. |
-| `CHANGELOG.md` | **Generado, no editado a mano.** |
-| `.github/workflows/release.yml` | Corta la versión, empuja el tag, crea la release y publica la imagen. |
+| Fichero                         | Papel                                                                                                       |
+| ------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| `commitlint.config.mjs`         | Valida el mensaje contra Conventional Commits, con `scope-enum` limitado a los módulos reales del proyecto. |
+| `.husky/commit-msg`             | Ejecuta `commitlint` en cada commit local.                                                                  |
+| `.husky/pre-commit`             | Ejecuta `lint-staged` sobre lo que está en el índice.                                                       |
+| `.versionrc.json`               | Configura qué tipos de commit aparecen en el changelog y con qué títulos.                                   |
+| `CHANGELOG.md`                  | **Generado, no editado a mano.**                                                                            |
+| `.github/workflows/release.yml` | Corta la versión, empuja el tag, crea la release y publica la imagen.                                       |
 
 **Cómo se traduce un commit en una versión:**
 
-| Commit | Bump | Aparece en el changelog |
-|---|---|---|
-| `feat(reservations): impedir solapes con EXCLUDE` | **MINOR** `0.1.0 → 0.2.0` | Sí, en *Funcionalidades* |
-| `fix(availability): el hueco de la frontera se descartaba` | **PATCH** `0.2.0 → 0.2.1` | Sí, en *Correcciones* |
-| `perf(reservations): usar el índice GiST parcial` | **PATCH** | Sí, en *Rendimiento* |
-| `refactor:`, `test:`, `style:`, `ci:`, `chore:` | ninguno | No |
-| Cuerpo con `BREAKING CHANGE: ...` | **MAJOR** `0.2.1 → 1.0.0` | Sí, destacado |
+| Commit                                                     | Bump                      | Aparece en el changelog  |
+| ---------------------------------------------------------- | ------------------------- | ------------------------ |
+| `feat(reservations): impedir solapes con EXCLUDE`          | **MINOR** `0.1.0 → 0.2.0` | Sí, en _Funcionalidades_ |
+| `fix(availability): el hueco de la frontera se descartaba` | **PATCH** `0.2.0 → 0.2.1` | Sí, en _Correcciones_    |
+| `perf(reservations): usar el índice GiST parcial`          | **PATCH**                 | Sí, en _Rendimiento_     |
+| `refactor:`, `test:`, `style:`, `ci:`, `chore:`            | ninguno                   | No                       |
+| Cuerpo con `BREAKING CHANGE: ...`                          | **MAJOR** `0.2.1 → 1.0.0` | Sí, destacado            |
 
-> **Por qué `commitlint` no es policía de estilo.** La versión se *deriva* de estos
+> **Por qué `commitlint` no es policía de estilo.** La versión se _deriva_ de estos
 > mensajes. Un cambio real de funcionalidad etiquetado `chore` produce un número de
 > versión equivocado y un changelog que engaña a quien actualiza. El hook local y el job
 > `commits` del CI —que además cubre los commits empujados con `--no-verify`— existen
@@ -1860,11 +1862,11 @@ mensaje de commit  →  commitlint  →  commit-and-tag-version  →  CHANGELOG.
 // package.json — scripts, alineados con los del CRM
 {
   "scripts": {
-    "release":       "commit-and-tag-version",
-    "release:dry":   "commit-and-tag-version --dry-run",
+    "release": "commit-and-tag-version",
+    "release:dry": "commit-and-tag-version --dry-run",
     "release:minor": "commit-and-tag-version --release-as minor",
-    "prepare":       "husky"
-  }
+    "prepare": "husky",
+  },
 }
 ```
 
@@ -1877,23 +1879,23 @@ trabajo** &mdash;y eso es exactamente lo que un evaluador mira antes de leer có
 
 Cuatro ficheros por repositorio, ya escritos y con el YAML validado:
 
-| Fichero | Cuándo corre | Qué hace |
-|---|---|---|
-| `.github/workflows/ci.yml` | push y PR a `main` / `develop` | Los *quality gates*. Ver tabla de jobs abajo. |
-| `.github/workflows/release.yml` | manual (`workflow_dispatch`) | Versiona, tagea, crea la release y publica la imagen en GHCR. |
-| `.github/dependabot.yml` | semanal | Actualiza npm, actions y Docker **con cooldown de 7 días**. |
-| `.husky/*` | local | Valida antes de que nada llegue a CI. |
+| Fichero                         | Cuándo corre                   | Qué hace                                                      |
+| ------------------------------- | ------------------------------ | ------------------------------------------------------------- |
+| `.github/workflows/ci.yml`      | push y PR a `main` / `develop` | Los _quality gates_. Ver tabla de jobs abajo.                 |
+| `.github/workflows/release.yml` | manual (`workflow_dispatch`)   | Versiona, tagea, crea la release y publica la imagen en GHCR. |
+| `.github/dependabot.yml`        | semanal                        | Actualiza npm, actions y Docker **con cooldown de 7 días**.   |
+| `.husky/*`                      | local                          | Valida antes de que nada llegue a CI.                         |
 
 **Jobs del CI del backend:**
 
-| Job | Depende de | Qué comprueba |
-|---|---|---|
-| `quality` | &mdash; | `lint:check`, `format:check`, `typecheck`. Rápido y sin servicios: falla pronto. |
-| `security` | &mdash; | `audit:signatures`, `audit:vulns`, `audit:osv` (§2). |
-| `test-unit` | &mdash; | `test:cov` y sube el informe de cobertura como artefacto. |
-| `test-e2e` | `quality` | **PostgreSQL 18 real** como *service container*, con `healthcheck`. Migraciones y suite e2e. |
-| `docker` | `quality` | Construye la imagen de producción con SBOM y procedencia, y la escanea con Trivy. No la publica. |
-| `commits` | &mdash; (solo PR) | `commitlint` sobre el rango del PR. Caza lo que se empujó con `--no-verify`. |
+| Job         | Depende de        | Qué comprueba                                                                                    |
+| ----------- | ----------------- | ------------------------------------------------------------------------------------------------ |
+| `quality`   | &mdash;           | `lint:check`, `format:check`, `typecheck`. Rápido y sin servicios: falla pronto.                 |
+| `security`  | &mdash;           | `audit:signatures`, `audit:vulns`, `audit:osv` (§2).                                             |
+| `test-unit` | &mdash;           | `test:cov` y sube el informe de cobertura como artefacto.                                        |
+| `test-e2e`  | `quality`         | **PostgreSQL 18 real** como _service container_, con `healthcheck`. Migraciones y suite e2e.     |
+| `docker`    | `quality`         | Construye la imagen de producción con SBOM y procedencia, y la escanea con Trivy. No la publica. |
+| `commits`   | &mdash; (solo PR) | `commitlint` sobre el rango del PR. Caza lo que se empujó con `--no-verify`.                     |
 
 En el frontend los jobs son `quality`, `security`, `test`, `build`, `e2e` y `commits`. El
 de Playwright **no corre en cada push**: necesita el stack completo, así que se dispara a
@@ -1903,7 +1905,7 @@ cobertura que en local se obtiene con un comando.
 **Detalles que evitan fallos reales:**
 
 - `concurrency` con `cancel-in-progress`: un push nuevo cancela la ejecución anterior del
-  mismo *ref* en lugar de pagar las dos.
+  mismo _ref_ en lugar de pagar las dos.
 - El service container de Postgres lleva `--health-cmd pg_isready`. Sin eso, el job
   compite con el arranque de la base y falla de forma intermitente.
 - `permissions: contents: read` por defecto; solo `release.yml` sube a `contents: write`
@@ -1912,15 +1914,15 @@ cobertura que en local se obtiene con un comando.
   necesita su script para bajar los navegadores, y se rehabilita en ese paso concreto.
 - **Todas las actions fijadas por SHA.** Resueltas el 2026-09-01:
 
-| Action | Versión | SHA fijado |
-|---|---|---|
-| `actions/checkout` | v7.0.1 | `3d3c42e5aac5ba805825da76410c181273ba90b1` |
-| `actions/setup-node` | v7.0.0 | `820762786026740c76f36085b0efc47a31fe5020` |
-| `actions/upload-artifact` | v7.0.1 | `043fb46d1a93c77aae656e7c1c64a875d1fc6a0a` |
-| `docker/setup-buildx-action` | v4.3.0 | `37fe631027851001ddb9b187196cc803df7f5f0e` |
-| `docker/build-push-action` | v7.3.0 | `53b7df96c91f9c12dcc8a07bcb9ccacbed38856a` |
-| `docker/login-action` | v4.6.0 | `dbcb813823bdd20940b903addbd779551569679f` |
-| `aquasecurity/trivy-action` | v0.36.0 | `ed142fd0673e97e23eac54620cfb913e5ce36c25` |
+| Action                       | Versión | SHA fijado                                 |
+| ---------------------------- | ------- | ------------------------------------------ |
+| `actions/checkout`           | v7.0.1  | `3d3c42e5aac5ba805825da76410c181273ba90b1` |
+| `actions/setup-node`         | v7.0.0  | `820762786026740c76f36085b0efc47a31fe5020` |
+| `actions/upload-artifact`    | v7.0.1  | `043fb46d1a93c77aae656e7c1c64a875d1fc6a0a` |
+| `docker/setup-buildx-action` | v4.3.0  | `37fe631027851001ddb9b187196cc803df7f5f0e` |
+| `docker/build-push-action`   | v7.3.0  | `53b7df96c91f9c12dcc8a07bcb9ccacbed38856a` |
+| `docker/login-action`        | v4.6.0  | `dbcb813823bdd20940b903addbd779551569679f` |
+| `aquasecurity/trivy-action`  | v0.36.0 | `ed142fd0673e97e23eac54620cfb913e5ce36c25` |
 
 **Cortar una versión**, una vez el trabajo está en `main`:
 
@@ -1930,7 +1932,7 @@ npm run release       # bump + CHANGELOG.md + commit + tag
 git push --follow-tags origin main
 ```
 
-O desde GitHub: *Actions → Release → Run workflow*, con la opción **dry-run** marcada la
+O desde GitHub: _Actions → Release → Run workflow_, con la opción **dry-run** marcada la
 primera vez. El workflow rechaza cortar una versión si `lint`, `typecheck` o los tests
 fallan: **nunca se libera desde un árbol en rojo.**
 
@@ -1938,29 +1940,29 @@ fallan: **nunca se libera desde un árbol en rojo.**
 
 ## 6. Estrategia de pruebas
 
-El enunciado dice: *"queremos ver cómo la resuelves y **cómo la pruebas**"*. Las pruebas son
+El enunciado dice: _"queremos ver cómo la resuelves y **cómo la pruebas**"_. Las pruebas son
 la mitad del entregable.
 
 ### 6.1 Backend
 
-| Nivel | Herramientas | Qué cubre | Nº aprox. |
-|---|---|---|---:|
-| Unitarias, sin E/S | Jest 30 + fakes en memoria | `Period`, `subtractIntervals`, cada regla por separado, los servicios. | ~70 |
-| Integración con Postgres real | Jest + Testcontainers 12 | Repositorios, la constraint, migraciones `up`/`down`, el advisory lock. | ~25 |
-| End-to-end HTTP | Supertest + Testcontainers | Flujos completos con sesión real: crear, filtrar, cancelar, permisos. | ~20 |
-| **Concurrencia** | Supertest + `Promise.all` | La prueba que demuestra que la solución es real. | 3 |
+| Nivel                         | Herramientas               | Qué cubre                                                               | Nº aprox. |
+| ----------------------------- | -------------------------- | ----------------------------------------------------------------------- | --------: |
+| Unitarias, sin E/S            | Jest 30 + fakes en memoria | `Period`, `subtractIntervals`, cada regla por separado, los servicios.  |       ~70 |
+| Integración con Postgres real | Jest + Testcontainers 12   | Repositorios, la constraint, migraciones `up`/`down`, el advisory lock. |       ~25 |
+| End-to-end HTTP               | Supertest + Testcontainers | Flujos completos con sesión real: crear, filtrar, cancelar, permisos.   |       ~20 |
+| **Concurrencia**              | Supertest + `Promise.all`  | La prueba que demuestra que la solución es real.                        |         3 |
 
 ```ts
 // test/unit/overlap.spec.ts — la tabla de §3.4, convertida en test
 // Existente: 2026-09-15 de 10:00 a 11:00 UTC.
 describe.each([
-  ['a · justo antes',    '09:00', '10:00', false],  // frontera: NO choca
-  ['b · justo después',  '11:00', '12:00', false],  // frontera: NO choca
-  ['c · pisa el inicio', '09:30', '10:30', true ],
-  ['d · pisa el final',  '10:30', '11:30', true ],
-  ['e · contenida',      '10:15', '10:45', true ],
-  ['f · envolvente',     '09:30', '11:30', true ],
-  ['g · idéntica',       '10:00', '11:00', true ],
+  ['a · justo antes', '09:00', '10:00', false], // frontera: NO choca
+  ['b · justo después', '11:00', '12:00', false], // frontera: NO choca
+  ['c · pisa el inicio', '09:30', '10:30', true],
+  ['d · pisa el final', '10:30', '11:30', true],
+  ['e · contenida', '10:15', '10:45', true],
+  ['f · envolvente', '09:30', '11:30', true],
+  ['g · idéntica', '10:00', '11:00', true],
 ])('%s', (_, startAt, endAt, expectsConflict) => {
   it(expectsConflict ? 'is rejected with 409' : 'is accepted', async () => {
     const result = await createReservation({ resourceId: room.id, startAt, endAt });
@@ -1975,15 +1977,20 @@ describe.each([
 // test/e2e/concurrency.e2e-spec.ts — la prueba estrella
 it('with 25 simultaneous requests for the same slot, exactly one wins', async () => {
   const payload = {
-    resourceId: room.id, title: 'Comité',
-    startAt: '2026-09-15T10:00:00Z', endAt: '2026-09-15T11:00:00Z',
+    resourceId: room.id,
+    title: 'Comité',
+    startAt: '2026-09-15T10:00:00Z',
+    endAt: '2026-09-15T11:00:00Z',
   };
 
   // Sin Idempotency-Key: son 25 intentos genuinamente distintos compitiendo.
   const responses = await Promise.all(
     Array.from({ length: 25 }, () =>
       request(app.getHttpServer())
-        .post('/api/v1/reservations').set('Cookie', sessionCookie).send(payload)),
+        .post('/api/v1/reservations')
+        .set('Cookie', sessionCookie)
+        .send(payload),
+    ),
   );
 
   expect(responses.filter((r) => r.status === 201)).toHaveLength(1);
@@ -1994,8 +2001,8 @@ it('with 25 simultaneous requests for the same slot, exactly one wins', async ()
 });
 
 it('the constraint holds even when the application layer is bypassed', async () => {
-  await sql(`INSERT INTO reservation (...) VALUES (...)`);           // 10:00–11:00 OK
-  await expect(sql(`INSERT INTO reservation (...) VALUES (...)`))     // 10:30–11:30
+  await sql(`INSERT INTO reservation (...) VALUES (...)`); // 10:00–11:00 OK
+  await expect(sql(`INSERT INTO reservation (...) VALUES (...)`)) // 10:30–11:30
     .rejects.toMatchObject({ code: '23P01' });
 });
 
@@ -2018,16 +2025,16 @@ coverageThreshold: {
 ```
 
 Se prueba contra un Postgres **real** vía Testcontainers, nunca SQLite en memoria: la
-constraint de exclusión *solo existe en PostgreSQL*, así que probarla en otro motor haría
+constraint de exclusión _solo existe en PostgreSQL_, así que probarla en otro motor haría
 que la prueba principal no probara nada.
 
 ### 6.2 Frontend
 
-| Nivel | Herramientas | Qué cubre | Nº aprox. |
-|---|---|---|---:|
-| Unitarias | Vitest 4 + jsdom | `lib/dates.ts` con TZ fijada, `lib/api/errors.ts`, mapeo de filtros a query string. | ~20 |
-| Componentes | Vitest + Testing Library + MSW | `BookingDialog`, `ReservationFilters`, `ResourcesTable`, `StatusChip`. | ~18 |
-| End-to-end | Playwright 1.62 | Dos recorridos contra el stack real en Docker. | 4 |
+| Nivel       | Herramientas                   | Qué cubre                                                                           | Nº aprox. |
+| ----------- | ------------------------------ | ----------------------------------------------------------------------------------- | --------: |
+| Unitarias   | Vitest 4 + jsdom               | `lib/dates.ts` con TZ fijada, `lib/api/errors.ts`, mapeo de filtros a query string. |       ~20 |
+| Componentes | Vitest + Testing Library + MSW | `BookingDialog`, `ReservationFilters`, `ResourcesTable`, `StatusChip`.              |       ~18 |
+| End-to-end  | Playwright 1.62                | Dos recorridos contra el stack real en Docker.                                      |         4 |
 
 ```ts
 // vitest.config.ts
@@ -2038,7 +2045,7 @@ export default defineConfig({
   plugins: [react()],
   test: {
     environment: 'jsdom',
-    setupFiles: ['./test/setup.ts'],       // jest-dom + servidor MSW
+    setupFiles: ['./test/setup.ts'], // jest-dom + servidor MSW
     globals: true,
     // Zona horaria fija: sin esto, los tests de fechas pasan en tu máquina y
     // fallan en CI. Es el fallo más común de una app de reservas.
@@ -2056,8 +2063,9 @@ export default defineConfig({
 // test/components/booking-dialog.test.tsx — el test que importa del front
 describe('BookingDialog', () => {
   it('sends the selected slot and closes on success', async () => {
-    server.use(http.post('*/api/v1/reservations', () =>
-      HttpResponse.json({ id: 'r-1' }, { status: 201 })));
+    server.use(
+      http.post('*/api/v1/reservations', () => HttpResponse.json({ id: 'r-1' }, { status: 201 })),
+    );
 
     render(<BookingDialog resource={room} open onClose={onClose} />);
     await userEvent.click(screen.getByRole('button', { name: /10:00 – 11:00/ }));
@@ -2067,11 +2075,18 @@ describe('BookingDialog', () => {
   });
 
   it('shows the conflicting slot and keeps the dialog open on 409', async () => {
-    server.use(http.post('*/api/v1/reservations', () => HttpResponse.json({
-      title: 'El recurso ya está reservado en ese horario',
-      code: 'OVERLAPPING_RESERVATION',
-      conflict: { startAt: '2026-09-15T10:00:00Z', endAt: '2026-09-15T11:00:00Z' },
-    }, { status: 409 })));
+    server.use(
+      http.post('*/api/v1/reservations', () =>
+        HttpResponse.json(
+          {
+            title: 'El recurso ya está reservado en ese horario',
+            code: 'OVERLAPPING_RESERVATION',
+            conflict: { startAt: '2026-09-15T10:00:00Z', endAt: '2026-09-15T11:00:00Z' },
+          },
+          { status: 409 },
+        ),
+      ),
+    );
 
     render(<BookingDialog resource={room} open onClose={onClose} />);
     await userEvent.click(screen.getByRole('button', { name: 'Confirmar reserva' }));
@@ -2128,28 +2143,28 @@ test('muestra el conflicto al intentar un horario ocupado', async ({ page }) => 
 ## 7. Plan por fases
 
 Dieciséis fases en orden de dependencia. Cada una acaba en un commit convencional y en algo
-que se puede *enseñar*. La columna **núcleo** marca lo que el enunciado exige de forma
+que se puede _enseñar_. La columna **núcleo** marca lo que el enunciado exige de forma
 explícita.
 
-| Fase | Entregable | Criterio de aceptación | Núcleo | h |
-|---|---|---|:-:|--:|
-| **F0** · Cimientos | Repos, TS estricto, ESLint + Prettier, `.npmrc` con cooldown. **Husky + commitlint + `commit-and-tag-version` desde el primer commit** (§5.5). | `npm ci` reproduce el árbol; un commit mal formado se rechaza en local. | ✅ | 3 |
-| **F1** · Docker de desarrollo | `Dockerfile.dev`, `docker-compose.yml`, Postgres 18 con volumen correcto, init SQL. | `docker compose up` y la API responde `/health`. | ✅ | 3 |
-| **F2** · Esquema | Las cuatro migraciones: `btree_gist`, columna generada, constraint, índices. | `migration:run` y `migration:revert` sobre base limpia. | ✅ | 3 |
-| **F3** · Autenticación | Puerto `AuthProvider` + `BetterAuthProvider` + guards + decoradores propios + regla de ESLint + **tests de contrato** (§3.10). Seed de admin. | Login devuelve cookie; un endpoint protegido da 401 sin ella; `FakeAuthProvider` pasa el mismo contrato. | | 4 |
-| **F4** · Catálogo | CRUD de tipos y recursos, baja lógica, validación con ajv. | Atributos que no cumplen el esquema del tipo → 422. | ✅ | 3 |
-| **F5** · Crear reserva | `Period`, motor de reglas, advisory lock, traducción de `23P01`. **El corazón.** | Los siete casos pasan; un solape da 409 con el conflicto. | ✅ | 5 |
-| **F6** · Disponibilidad | `subtractIntervals`, ventanas operativas, bloqueos, endpoint. | Con una reserva de 10 a 11, ese hueco no aparece. | ✅ | 3 |
-| **F7** · Listar y cancelar | Filtros, paginación, orden, cancelación idempotente, reprogramación. | Cancelar libera el hueco; los cuatro filtros combinan. | ✅ | 3 |
-| **F8** · Pruebas de backend | Testcontainers, suite de solape, **test de concurrencia**, umbrales en CI. | 25 peticiones simultáneas → exactamente un 201. | ✅ | 4 |
-| **F9** · Docker de producción | `Dockerfile` multi-stage, `docker-compose.prod.yml`, hardening, healthchecks. | La imagen arranca sin root; `replicas: 2` pasa el test de concurrencia. | | 3 |
-| **F10** · CI/CD y release | `ci.yml` y `release.yml` con actions fijadas por SHA, Dependabot con cooldown, `audit:osv`, Trivy y SBOM (§5.6). | Los seis jobs pasan; `release:dry` produce la versión y el changelog correctos. | | 3 |
-| **F11** · Documentación | Swagger completo, seeds, colección de Bruno, README con decisiones. | Un evaluador clona, ejecuta un comando y prueba la API. | ✅ | 3 |
-| **F12** · Base del front | Next 16, tema MUI, cliente generado, `i18n/es.ts`, login, shell, Docker. | Se entra con el usuario del seed y se llega a una pantalla autenticada. | | 3 |
-| **F13** · Recursos | DataGrid, alta y edición, formulario dinámico según el JSON Schema. | Se crea una sala desde la interfaz y aparece en la lista. | | 3 |
-| **F14** · Reservas | Listado con filtros, `BookingDialog`, huecos libres, manejo del 409, cancelar. | Reservar un hueco ocupado muestra el conflicto y ofrece alternativas. | | 4 |
-| **F15** · Pruebas de front | Vitest + RTL + MSW, agenda semanal, accesibilidad, Playwright. | Los cuatro recorridos de Playwright pasan en CI. | | 4 |
-| **F16** · Reflexión | El documento del enunciado. **Se escribe al final pero se anota desde F0.** | Cubre los seis puntos de §8. | ✅ | 3 |
+| Fase                          | Entregable                                                                                                                                     | Criterio de aceptación                                                                                   | Núcleo |   h |
+| ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- | :----: | --: |
+| **F0** · Cimientos            | Repos, TS estricto, ESLint + Prettier, `.npmrc` con cooldown. **Husky + commitlint + `commit-and-tag-version` desde el primer commit** (§5.5). | `npm ci` reproduce el árbol; un commit mal formado se rechaza en local.                                  |   ✅   |   3 |
+| **F1** · Docker de desarrollo | `Dockerfile.dev`, `docker-compose.yml`, Postgres 18 con volumen correcto, init SQL.                                                            | `docker compose up` y la API responde `/health`.                                                         |   ✅   |   3 |
+| **F2** · Esquema              | Las cuatro migraciones: `btree_gist`, columna generada, constraint, índices.                                                                   | `migration:run` y `migration:revert` sobre base limpia.                                                  |   ✅   |   3 |
+| **F3** · Autenticación        | Puerto `AuthProvider` + `BetterAuthProvider` + guards + decoradores propios + regla de ESLint + **tests de contrato** (§3.10). Seed de admin.  | Login devuelve cookie; un endpoint protegido da 401 sin ella; `FakeAuthProvider` pasa el mismo contrato. |        |   4 |
+| **F4** · Catálogo             | CRUD de tipos y recursos, baja lógica, validación con ajv.                                                                                     | Atributos que no cumplen el esquema del tipo → 422.                                                      |   ✅   |   3 |
+| **F5** · Crear reserva        | `Period`, motor de reglas, advisory lock, traducción de `23P01`. **El corazón.**                                                               | Los siete casos pasan; un solape da 409 con el conflicto.                                                |   ✅   |   5 |
+| **F6** · Disponibilidad       | `subtractIntervals`, ventanas operativas, bloqueos, endpoint.                                                                                  | Con una reserva de 10 a 11, ese hueco no aparece.                                                        |   ✅   |   3 |
+| **F7** · Listar y cancelar    | Filtros, paginación, orden, cancelación idempotente, reprogramación.                                                                           | Cancelar libera el hueco; los cuatro filtros combinan.                                                   |   ✅   |   3 |
+| **F8** · Pruebas de backend   | Testcontainers, suite de solape, **test de concurrencia**, umbrales en CI.                                                                     | 25 peticiones simultáneas → exactamente un 201.                                                          |   ✅   |   4 |
+| **F9** · Docker de producción | `Dockerfile` multi-stage, `docker-compose.prod.yml`, hardening, healthchecks.                                                                  | La imagen arranca sin root; `replicas: 2` pasa el test de concurrencia.                                  |        |   3 |
+| **F10** · CI/CD y release     | `ci.yml` y `release.yml` con actions fijadas por SHA, Dependabot con cooldown, `audit:osv`, Trivy y SBOM (§5.6).                               | Los seis jobs pasan; `release:dry` produce la versión y el changelog correctos.                          |        |   3 |
+| **F11** · Documentación       | Swagger completo, seeds, colección de Bruno, README con decisiones.                                                                            | Un evaluador clona, ejecuta un comando y prueba la API.                                                  |   ✅   |   3 |
+| **F12** · Base del front      | Next 16, tema MUI, cliente generado, `i18n/es.ts`, login, shell, Docker.                                                                       | Se entra con el usuario del seed y se llega a una pantalla autenticada.                                  |        |   3 |
+| **F13** · Recursos            | DataGrid, alta y edición, formulario dinámico según el JSON Schema.                                                                            | Se crea una sala desde la interfaz y aparece en la lista.                                                |        |   3 |
+| **F14** · Reservas            | Listado con filtros, `BookingDialog`, huecos libres, manejo del 409, cancelar.                                                                 | Reservar un hueco ocupado muestra el conflicto y ofrece alternativas.                                    |        |   4 |
+| **F15** · Pruebas de front    | Vitest + RTL + MSW, agenda semanal, accesibilidad, Playwright.                                                                                 | Los cuatro recorridos de Playwright pasan en CI.                                                         |        |   4 |
+| **F16** · Reflexión           | El documento del enunciado. **Se escribe al final pero se anota desde F0.**                                                                    | Cubre los seis puntos de §8.                                                                             |   ✅   |   3 |
 
 **Total ≈ 57 h · solo núcleo ≈ 33 h**
 
@@ -2166,7 +2181,7 @@ anotes, en una línea, cada vez que: aceptaste una sugerencia sin cambios, la co
 por qué, o la descartaste. En F16 ese fichero es el borrador del documento reflexivo.
 
 Dos hábitos que dan material concreto: pide a la IA que **ataque** tu propio diseño
-(*"¿qué se rompe con dos instancias de la API?"*) en vez de solo generar código, y
+(_"¿qué se rompe con dos instancias de la API?"_) en vez de solo generar código, y
 **escribe tú los tests de la regla central antes de generar su implementación**.
 
 ---
@@ -2176,17 +2191,17 @@ Dos hábitos que dan material concreto: pide a la IA que **ataque** tu propio di
 Seis secciones, dos páginas y media, en prosa. La mayoría de candidatos describe lo que
 hizo; la versión que destaca explica **lo que descartó**.
 
-| Sección | Qué contar |
-|---|---|
-| **1. El problema tal como lo entendí** | Que no va de un CRUD sino de **una invariante bajo concurrencia**. Por qué el dominio genérico multi-tipo no era complejidad gratis. El alcance que dejaste fuera y por qué. |
-| **2. La decisión central** | Las tres capas y el matiz que las justifica: **la constraint garantiza, el lock explica**. Por qué `'[)'`. Por qué descartaste `SERIALIZABLE`. |
-| **2b. Dónde pusiste las abstracciones** | Que descartaste `domain/application/infrastructure` por sobre-ingeniería a esta escala, y que aun así conservaste **dos** puertos: las reglas y el proveedor de identidad (§3.10). Saber dónde *no* abstraer se lee mejor que abstraerlo todo. Cuenta también que descartaste el paquete comunitario de auth por 40 líneas propias. |
-| **3. Cómo lo probé** | Los siete casos frontera y por qué *a* y *b* son los interesantes. El test de las 25 peticiones y qué habría fallado sin el lock. Por qué Testcontainers y no un doble en memoria. |
-| **4. Dependencias y cadena de suministro** | El cooldown de 7 días, y la consecuencia asumida: **20 de 55 paquetes fijados a una versión que no es la última, NestJS 11 en lugar del 12 publicado hace 4 días**. `class-transformer` sin mantenimiento desde 2021 y cómo lo mitigaste. Esta sección casi nadie la escribe. |
-| **5. Trabajar con IA** | Concreto y honesto, con ejemplos reales de tu `NOTES.md`. Dónde aceleró y **dónde te dio algo plausible pero incorrecto** —casi seguro, una comprobación de solape solo en el servicio, o la frontera `end == start` mal tratada—, cómo lo detectaste y qué hiciste. |
-| **6. Lo que falta y qué haría con una semana más** | Sin excusas: paginación por offset en lugar de cursor, sin auditoría de cambios, sin rate limiting, cobertura de front deliberadamente ligera. Después, priorizado: reservas recurrentes, lista de espera sobre huecos liberados, métricas de ocupación. |
+| Sección                                            | Qué contar                                                                                                                                                                                                                                                                                                                          |
+| -------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **1. El problema tal como lo entendí**             | Que no va de un CRUD sino de **una invariante bajo concurrencia**. Por qué el dominio genérico multi-tipo no era complejidad gratis. El alcance que dejaste fuera y por qué.                                                                                                                                                        |
+| **2. La decisión central**                         | Las tres capas y el matiz que las justifica: **la constraint garantiza, el lock explica**. Por qué `'[)'`. Por qué descartaste `SERIALIZABLE`.                                                                                                                                                                                      |
+| **2b. Dónde pusiste las abstracciones**            | Que descartaste `domain/application/infrastructure` por sobre-ingeniería a esta escala, y que aun así conservaste **dos** puertos: las reglas y el proveedor de identidad (§3.10). Saber dónde _no_ abstraer se lee mejor que abstraerlo todo. Cuenta también que descartaste el paquete comunitario de auth por 40 líneas propias. |
+| **3. Cómo lo probé**                               | Los siete casos frontera y por qué _a_ y _b_ son los interesantes. El test de las 25 peticiones y qué habría fallado sin el lock. Por qué Testcontainers y no un doble en memoria.                                                                                                                                                  |
+| **4. Dependencias y cadena de suministro**         | El cooldown de 7 días, y la consecuencia asumida: **20 de 55 paquetes fijados a una versión que no es la última, NestJS 11 en lugar del 12 publicado hace 4 días**. `class-transformer` sin mantenimiento desde 2021 y cómo lo mitigaste. Esta sección casi nadie la escribe.                                                       |
+| **5. Trabajar con IA**                             | Concreto y honesto, con ejemplos reales de tu `NOTES.md`. Dónde aceleró y **dónde te dio algo plausible pero incorrecto** —casi seguro, una comprobación de solape solo en el servicio, o la frontera `end == start` mal tratada—, cómo lo detectaste y qué hiciste.                                                                |
+| **6. Lo que falta y qué haría con una semana más** | Sin excusas: paginación por offset en lugar de cursor, sin auditoría de cambios, sin rate limiting, cobertura de front deliberadamente ligera. Después, priorizado: reservas recurrentes, lista de espera sobre huecos liberados, métricas de ocupación.                                                                            |
 
-> **El detalle que casi nadie incluye.** Una sección corta titulada *"Un error que cometí"*.
+> **El detalle que casi nadie incluye.** Una sección corta titulada _"Un error que cometí"_.
 > Elige uno real —el más probable es haber tratado la frontera `end == start` como
 > conflicto hasta que el test parametrizado lo delató—, cuenta cómo lo encontraste y qué
 > cambiaste. Un candidato que sabe depurar su propio razonamiento vale más que uno cuyo
@@ -2196,16 +2211,16 @@ hizo; la versión que destaca explica **lo que descartó**.
 
 ## 9. Checklist de entrega
 
-| Requisito del enunciado | Dónde queda resuelto |
-|---|---|
-| Modela recursos, usuarios y reservas | §3.2 — `resource_type` + `resource`, `user` de Better Auth, `reservation`. |
-| **Sin solapes entre reservas activas** | §3.4 — tres capas; §6.1 — siete casos frontera y prueba de concurrencia. |
-| Consultar disponibilidad en un rango | §3.6 — `GET /resources/:id/availability`. |
-| Cancelar una reserva | §3.7 — `POST /reservations/:id/cancellation`, idempotente y con motivo. |
-| Listar con filtros y paginación | §3.7 — recurso, usuario, rango, estado + `page`/`limit`. |
-| CRUD de recursos con baja | §3.7 — baja lógica que protege el histórico. |
-| Autenticación *(opcional, suma)* | §3.10 — Better Auth tras un adaptador, con sesiones y roles, compartido con el front. |
-| Documento reflexivo | §8 — seis secciones, con la de IA sustentada en notas reales. |
+| Requisito del enunciado                | Dónde queda resuelto                                                                  |
+| -------------------------------------- | ------------------------------------------------------------------------------------- |
+| Modela recursos, usuarios y reservas   | §3.2 — `resource_type` + `resource`, `user` de Better Auth, `reservation`.            |
+| **Sin solapes entre reservas activas** | §3.4 — tres capas; §6.1 — siete casos frontera y prueba de concurrencia.              |
+| Consultar disponibilidad en un rango   | §3.6 — `GET /resources/:id/availability`.                                             |
+| Cancelar una reserva                   | §3.7 — `POST /reservations/:id/cancellation`, idempotente y con motivo.               |
+| Listar con filtros y paginación        | §3.7 — recurso, usuario, rango, estado + `page`/`limit`.                              |
+| CRUD de recursos con baja              | §3.7 — baja lógica que protege el histórico.                                          |
+| Autenticación _(opcional, suma)_       | §3.10 — Better Auth tras un adaptador, con sesiones y roles, compartido con el front. |
+| Documento reflexivo                    | §8 — seis secciones, con la de IA sustentada en notas reales.                         |
 
 ### Lo que se entrega
 
@@ -2230,5 +2245,21 @@ la única parte del trabajo que se juzga antes de leer una línea de tu código.
 
 ---
 
-*Última verificación de versiones y vulnerabilidades: 2026-09-01.*
-*Revalidar con `npm run audit:osv` antes de entregar.*
+_Última verificación de versiones y vulnerabilidades: 2026-09-01._
+_Revalidar con `npm run audit:osv` antes de entregar._
+
+---
+
+## Apéndice A — Notas operativas descubiertas al implementar
+
+Cosas que solo aparecen ejecutando, anotadas aquí para no volver a tropezar.
+
+| Síntoma                                                          | Causa                                                                                                                                     | Solución                                                                                                                                            |
+| ---------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `CHANGELOG.md` con la cabecera duplicada tras la primera release | `commit-and-tag-version` **antepone** su cabecera; no reemplaza la existente. Un fichero semilla con texto propio queda debajo.           | Sembrar `CHANGELOG.md` **vacío**. La nota de «fichero generado» va en `header` dentro de `.versionrc.json`, que es lo que sobrevive a cada release. |
+| Los hooks de git no se ejecutan                                  | `npm ci --ignore-scripts` (política de §2) salta el script `prepare`, que es el que instala husky.                                        | Ejecutar `npm run prepare` una vez tras el primer install. Es el precio de `ignore-scripts`, y es barato.                                           |
+| `MODULE_NOT_FOUND: './app.module'` en el contenedor              | `incremental: true` + `deleteOutDir: true`: se borra `dist` pero sobrevive el `.tsbuildinfo`, así que la build incremental no emite nada. | `tsBuildInfoFile` dentro de `dist`.                                                                                                                 |
+| Editar `tsconfig.json` no tiene efecto en Docker                 | Solo `src/` estaba bind-mounteado.                                                                                                        | Montar también `tsconfig*.json` y `nest-cli.json` (§5.1).                                                                                           |
+| Todo `POST` responde 400 con «todos los campos faltan»           | `bodyParser: false` desactiva el parser de **toda** la app, no solo de `/api/auth`.                                                       | Reactivar `express.json()` salvo para `/api/auth` (§3.7).                                                                                           |
+| La app no arranca: «circular dependency (property key: data)»    | Swagger no resuelve el genérico `T` de `PaginatedResponseDto`.                                                                            | Declarar `data` explícito como array de objetos; `allOf` compone el tipo real.                                                                      |
+| `sign-up` da 500: `column "issuer" does not exist`               | `@better-auth/cli` empaqueta better-auth 1.6.21; la 1.7 añadió la columna.                                                                | Obtener el delta de `getMigrations()` del paquete instalado, no del CLI (§3.10).                                                                    |
