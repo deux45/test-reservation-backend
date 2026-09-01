@@ -2,6 +2,7 @@ import 'reflect-metadata';
 import { ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
+import { json, urlencoded, type NextFunction, type Request, type Response } from 'express';
 import { Logger } from 'nestjs-pino';
 import { AppModule } from './app.module';
 import { ProblemDetailsFilter } from './common/filters/problem-details.filter';
@@ -17,6 +18,21 @@ async function bootstrap(): Promise<void> {
   });
 
   app.useLogger(app.get(Logger));
+
+  // Re-enable JSON parsing for everything EXCEPT the auth routes.
+  //
+  // `bodyParser: false` above is required because Better Auth reads the raw
+  // request stream itself, but disabling it globally leaves every other
+  // endpoint receiving an empty body -- which surfaces as a validation error
+  // listing every field as missing, not as an obviously wrong parser setting.
+  app.use((req: Request, res: Response, next: NextFunction) => {
+    if (req.originalUrl.startsWith('/api/auth')) return next();
+    return json({ limit: '1mb' })(req, res, next);
+  });
+  app.use((req: Request, res: Response, next: NextFunction) => {
+    if (req.originalUrl.startsWith('/api/auth')) return next();
+    return urlencoded({ extended: true })(req, res, next);
+  });
 
   const config = app.get(ConfigService<Env, true>);
 
