@@ -9,6 +9,7 @@ import { AuthenticationGuard } from './auth/guards/authentication.guard';
 import { RolesGuard } from './auth/guards/roles.guard';
 import { validateEnv, type Env } from './config/env.validation';
 import { HealthModule } from './health/health.module';
+import { ReservationsModule } from './reservations/reservations.module';
 import { ResourcesModule } from './resources/resources.module';
 
 @Module({
@@ -53,6 +54,7 @@ import { ResourcesModule } from './resources/resources.module';
 
     AuthModule.forRoot(),
     ResourcesModule,
+    ReservationsModule,
     HealthModule,
   ],
   providers: [
