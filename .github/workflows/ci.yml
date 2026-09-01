@@ -1,0 +1,206 @@
+# Continuous integration: quality gates on every push and pull request.
+#
+# All third-party actions are pinned to a commit SHA, not a tag. Tags are mutable
+# and repointing one is how the tj-actions/changed-files compromise reached
+# thousands of repositories. The trailing comment records the human-readable
+# version so Dependabot can still propose upgrades.
+
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+# Cancel superseded runs on the same ref instead of paying for both.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  NODE_VERSION: '24'
+
+jobs:
+  # --------------------------------------------------------------------------
+  # Static analysis. Fast, no services, fails the whole pipeline early.
+  # --------------------------------------------------------------------------
+  quality:
+    name: Lint, format and types
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      # `npm ci` installs strictly from the lockfile; `npm install` would resolve
+      # fresh versions and silently defeat the .npmrc cooldown policy.
+      - run: npm ci --ignore-scripts
+
+      - run: npm run lint:check
+      - run: npm run format:check
+      - run: npm run typecheck
+
+  # --------------------------------------------------------------------------
+  # Supply-chain gates. See docs/IMPLEMENTATION-PLAN.md section 2.
+  # --------------------------------------------------------------------------
+  security:
+    name: Supply chain
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - run: npm ci --ignore-scripts
+
+      # Registry signatures and build provenance attestations.
+      - name: Verify package signatures
+        run: npm run audit:signatures
+
+      # GitHub Advisory Database.
+      - name: Audit known vulnerabilities
+        run: npm run audit:vulns
+
+      # OSV.dev — a second, independent source over the full transitive tree.
+      - name: Cross-check against OSV.dev
+        run: npm run audit:osv
+
+  # --------------------------------------------------------------------------
+  # Unit tests. No database: pure functions, rules and services with fakes.
+  # --------------------------------------------------------------------------
+  test-unit:
+    name: Unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - run: npm ci --ignore-scripts
+      - run: npm run test:cov
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: always()
+        with:
+          name: coverage
+          path: coverage/
+          retention-days: 7
+
+  # --------------------------------------------------------------------------
+  # Integration and e2e against a REAL PostgreSQL 18.
+  #
+  # The no-overlap invariant is an EXCLUDE constraint, which exists only in
+  # PostgreSQL. Running these against any other engine would mean the central
+  # test of this project proves nothing.
+  # --------------------------------------------------------------------------
+  test-e2e:
+    name: E2E tests (PostgreSQL 18)
+    runs-on: ubuntu-latest
+    needs: [quality]
+
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_USER: reservations
+          POSTGRES_PASSWORD: reservations
+          POSTGRES_DB: reservations_test
+        ports: ['5432:5432']
+        # Without this the job races the database and fails intermittently.
+        options: >-
+          --health-cmd "pg_isready -U reservations -d reservations_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgres://reservations:reservations@localhost:5432/reservations_test
+      BETTER_AUTH_SECRET: ci-only-secret-not-used-anywhere-else-32
+      BETTER_AUTH_URL: http://localhost:3000
+      FRONTEND_URL: http://localhost:3001
+      # Reuse the service container instead of letting Testcontainers start its own.
+      USE_EXTERNAL_DATABASE: 'true'
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - run: npm ci --ignore-scripts
+      - run: npm run migration:run:dev
+      - run: npm run test:e2e
+
+  # --------------------------------------------------------------------------
+  # Build the production image and scan it. Not pushed: this job proves the
+  # Dockerfile builds and is clean, nothing more.
+  # --------------------------------------------------------------------------
+  docker:
+    name: Build and scan image
+    runs-on: ubuntu-latest
+    needs: [quality]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # v4.3.0
+
+      - name: Build image
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
+        with:
+          context: .
+          load: true
+          tags: reservations-api:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          sbom: true
+          provenance: true
+
+      - name: Scan image with Trivy
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: reservations-api:${{ github.sha }}
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: '1'
+
+  # --------------------------------------------------------------------------
+  # Commit message hygiene. Husky enforces this locally; this catches commits
+  # pushed with --no-verify, which is exactly when it matters.
+  # --------------------------------------------------------------------------
+  commits:
+    name: Conventional commits
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0 # commitlint needs the full history to diff the range
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - run: npm ci --ignore-scripts
+
+      - name: Lint commit messages in this PR
+        run: >-
+          npx commitlint
+          --from ${{ github.event.pull_request.base.sha }}
+          --to ${{ github.event.pull_request.head.sha }}
+          --verbose

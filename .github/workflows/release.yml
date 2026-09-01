@@ -1,0 +1,136 @@
+# Release: bump the version, write the changelog, tag, and publish the image.
+#
+# Triggered manually rather than on every push to main. Deciding WHEN to cut a
+# release is a human call; deciding WHAT version it gets is not, and that part
+# is derived from the conventional commits by commit-and-tag-version.
+
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      release-as:
+        description: 'Version bump (leave empty to derive it from the commits)'
+        required: false
+        type: choice
+        options: ['', patch, minor, major]
+        default: ''
+      dry-run:
+        description: 'Preview the version and changelog without committing'
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: write # push the release commit and the tag
+  packages: write # push the image to GHCR
+
+env:
+  NODE_VERSION: '24'
+  REGISTRY: ghcr.io
+
+jobs:
+  release:
+    name: Version, changelog and tag
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # commit-and-tag-version reads the whole history to decide the bump.
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - run: npm ci --ignore-scripts
+
+      # Never cut a release from a red tree.
+      - name: Verify the tree is releasable
+        run: |
+          npm run lint:check
+          npm run typecheck
+          npm run test
+
+      - name: Configure git identity
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Preview release (dry run)
+        if: inputs.dry-run
+        run: npm run release -- --dry-run ${{ inputs.release-as && format('--release-as {0}', inputs.release-as) || '' }}
+
+      - name: Bump version, write CHANGELOG.md and tag
+        if: ${{ !inputs.dry-run }}
+        run: npm run release -- ${{ inputs.release-as && format('--release-as {0}', inputs.release-as) || '' }}
+
+      - name: Read the resulting version
+        id: version
+        run: echo "version=$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
+
+      - name: Push the release commit and tag
+        if: ${{ !inputs.dry-run }}
+        run: git push --follow-tags origin ${{ github.ref_name }}
+
+      # The notes are the section commit-and-tag-version just wrote, extracted
+      # inline rather than with `npx <some-package>`: pulling an unpinned package
+      # at release time is exactly the risk the .npmrc cooldown exists to avoid.
+      - name: Extract this version's changelog section
+        if: ${{ !inputs.dry-run }}
+        run: |
+          node -e "
+            const md = require('fs').readFileSync('CHANGELOG.md', 'utf8');
+            const sections = md.split(/^##\s+/m).filter(Boolean);
+            require('fs').writeFileSync('RELEASE_NOTES.md', '## ' + sections[1]);
+          "
+
+      - name: Create the GitHub release
+        if: ${{ !inputs.dry-run }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: >-
+          gh release create "v${{ steps.version.outputs.version }}"
+          --title "v${{ steps.version.outputs.version }}"
+          --notes-file RELEASE_NOTES.md
+
+  # Only publish an image for a version that actually exists.
+  publish-image:
+    name: Publish image to GHCR
+    runs-on: ubuntu-latest
+    needs: release
+    if: ${{ !inputs.dry-run }}
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: v${{ needs.release.outputs.version }}
+
+      - uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # v4.3.0
+
+      - uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
+        with:
+          context: .
+          push: true
+          # Both tags: the immutable one for rollbacks, `latest` for convenience.
+          tags: |
+            ${{ env.REGISTRY }}/${{ github.repository }}:${{ needs.release.outputs.version }}
+            ${{ env.REGISTRY }}/${{ github.repository }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          # An SBOM and a provenance attestation ship with the image, so a
+          # consumer can verify what is inside it and where it was built.
+          sbom: true
+          provenance: mode=max

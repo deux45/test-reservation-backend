@@ -1,0 +1,68 @@
+version: 2
+
+updates:
+  # --------------------------------------------------------------------------
+  # npm dependencies
+  # --------------------------------------------------------------------------
+  - package-ecosystem: npm
+    directory: '/'
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+
+    # Aligned with `min-release-age=7` in .npmrc. Without this, Dependabot would
+    # propose a version hours after publication -- exactly the window in which
+    # every npm incident of 2025-2026 was live and undetected.
+    cooldown:
+      default-days: 7
+
+    commit-message:
+      prefix: 'build'
+      prefix-development: 'build'
+      include: scope
+
+    groups:
+      # One PR per family instead of fifteen. Keeps review meaningful.
+      nestjs:
+        patterns: ['@nestjs/*']
+      typeorm:
+        patterns: ['typeorm', 'pg', '@types/pg']
+      testing:
+        patterns: ['jest', 'ts-jest', '@types/jest', 'supertest', 'testcontainers', '@testcontainers/*']
+      linting:
+        patterns: ['eslint', 'eslint-*', '@eslint/*', 'prettier', 'typescript-eslint']
+
+    ignore:
+      # Major bumps are a deliberate decision with a migration guide, never an
+      # automated PR. See section 1 of docs/IMPLEMENTATION-PLAN.md: NestJS 12
+      # was four days old when this project was scoped.
+      - dependency-name: '*'
+        update-types: ['version-update:semver-major']
+
+  # --------------------------------------------------------------------------
+  # GitHub Actions -- pinned by SHA, so Dependabot reads the version comment
+  # and bumps both the SHA and the comment together.
+  # --------------------------------------------------------------------------
+  - package-ecosystem: github-actions
+    directory: '/'
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    commit-message:
+      prefix: 'ci'
+      include: scope
+
+  # --------------------------------------------------------------------------
+  # Base images in the Dockerfiles
+  # --------------------------------------------------------------------------
+  - package-ecosystem: docker
+    directory: '/'
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    commit-message:
+      prefix: 'build'
+      include: scope
