@@ -54,14 +54,12 @@ export class ResourcesController {
   @Roles('admin')
   @ApiOperation({
     summary: 'Crea un recurso',
-    description:
-      'Los atributos se validan contra el JSON Schema de su tipo, así que un ' +
-      'recurso no puede existir con datos que su propia familia no admite.',
+    description: 'Alta de un recurso reservable dentro de un tipo existente.',
   })
   @ApiCreatedResponse({ type: ResourceDto })
   @ApiConflictResponse({ description: 'Ya existe un recurso con ese código' })
   @ApiUnprocessableEntityResponse({
-    description: 'Los atributos no cumplen el esquema, o la zona horaria no es válida',
+    description: 'La zona horaria no es válida',
   })
   create(@Body() dto: CreateResourceDto): Promise<ResourceDto> {
     return this.service.create(dto);
@@ -71,9 +69,7 @@ export class ResourcesController {
   @Roles('admin')
   @ApiOperation({
     summary: 'Actualiza un recurso',
-    description:
-      'code y resourceTypeId no son editables: cambiar cualquiera invalidaría ' +
-      'en silencio los atributos ya guardados.',
+    description: 'code y resourceTypeId no son editables: ambos identifican al recurso.',
   })
   @ApiOkResponse({ type: ResourceDto })
   update(

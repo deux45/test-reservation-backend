@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { type EntityManager, type QueryDeepPartialEntity, Repository } from 'typeorm';
+import { type EntityManager, Repository } from 'typeorm';
 import { ResourceType } from '../entities/resource-type.entity';
 
 /**
@@ -10,7 +10,6 @@ import { ResourceType } from '../entities/resource-type.entity';
 export type ResourceTypeUpdate = {
   name?: string;
   description?: string | null;
-  attributesSchema?: Record<string, unknown>;
   isActive?: boolean;
 };
 
@@ -43,8 +42,6 @@ export class ResourceTypeRepository {
   }
 
   async update(id: string, data: ResourceTypeUpdate, manager?: EntityManager): Promise<void> {
-    // See ResourceRepository.update: one cast at the ORM boundary, because
-    // TypeORM's deep partial does not map jsonb columns.
-    await this.scope(manager).update(id, data as QueryDeepPartialEntity<ResourceType>);
+    await this.scope(manager).update(id, data);
   }
 }

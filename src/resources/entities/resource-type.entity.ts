@@ -11,10 +11,9 @@ import { Resource } from './resource.entity';
 /**
  * A family of bookable things: meeting rooms, vehicles, equipment.
  *
- * `attributesSchema` is what makes the model generic without a table per
- * type. It holds a JSON Schema that every resource of this type must satisfy,
- * so adding "projector" is inserting a row rather than deploying code -- and
- * unlike inheritance, it keeps reservation queries across all types trivial.
+ * Types exist so resources can be grouped and filtered -- "every vehicle
+ * booked this week" is one query rather than a list of names. They carry no
+ * behaviour of their own.
  */
 @Entity('resource_type')
 export class ResourceType {
@@ -30,10 +29,6 @@ export class ResourceType {
 
   @Column({ type: 'text', nullable: true })
   description: string | null;
-
-  /** JSON Schema validated by ResourceAttributesService on every write. */
-  @Column({ name: 'attributes_schema', type: 'jsonb', default: () => `'{"type":"object"}'::jsonb` })
-  attributesSchema: Record<string, unknown>;
 
   @Column({ name: 'is_active', type: 'boolean', default: true })
   isActive: boolean;

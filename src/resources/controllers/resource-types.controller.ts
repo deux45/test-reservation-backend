@@ -1,11 +1,10 @@
-import { Body, Controller, Get, Param, ParseUUIDPipe, Post, Put } from '@nestjs/common';
+import { Body, Controller, Get, Param, ParseUUIDPipe, Post } from '@nestjs/common';
 import {
   ApiConflictResponse,
   ApiCreatedResponse,
   ApiOkResponse,
   ApiOperation,
   ApiTags,
-  ApiUnprocessableEntityResponse,
 } from '@nestjs/swagger';
 import { Roles } from '../../auth/decorators';
 import { CreateResourceTypeDto } from '../dtos/create-resource-type.dto';
@@ -20,9 +19,7 @@ export class ResourceTypesController {
   @Get()
   @ApiOperation({
     summary: 'Lista los tipos de recurso',
-    description:
-      'Cada tipo trae su JSON Schema de atributos, que el cliente usa para ' +
-      'renderizar el formulario de alta de recursos de ese tipo.',
+    description: 'Familias de recursos reservables: salas, portátiles, vehículos.',
   })
   @ApiOkResponse({ type: [ResourceTypeDto] })
   findAll(): Promise<ResourceTypeDto[]> {
@@ -41,30 +38,11 @@ export class ResourceTypesController {
   @ApiOperation({
     summary: 'Crea un tipo de recurso',
     description:
-      'Dar de alta una familia nueva (vehículo, proyector) es esta llamada, ' +
-      'no un despliegue. El esquema se valida como JSON Schema antes de guardarlo.',
+      'Dar de alta una familia nueva (vehículo, proyector) es esta llamada, no un despliegue.',
   })
   @ApiCreatedResponse({ type: ResourceTypeDto })
   @ApiConflictResponse({ description: 'Ya existe un tipo con ese código' })
-  @ApiUnprocessableEntityResponse({ description: 'El esquema no es un JSON Schema válido' })
   create(@Body() dto: CreateResourceTypeDto): Promise<ResourceTypeDto> {
     return this.service.create(dto);
-  }
-
-  @Put(':id/attributes-schema')
-  @Roles('admin')
-  @ApiOperation({
-    summary: 'Reemplaza el esquema de atributos de un tipo',
-    description:
-      'No revalida los recursos existentes: endurecer un esquema puede dejar ' +
-      'recursos previos fuera de él, y rechazarlos en masa aquí sería peor que ' +
-      'dejarlos como están hasta su próxima edición.',
-  })
-  @ApiOkResponse({ type: ResourceTypeDto })
-  updateSchema(
-    @Param('id', ParseUUIDPipe) id: string,
-    @Body() schema: Record<string, unknown>,
-  ): Promise<ResourceTypeDto> {
-    return this.service.updateSchema(id, schema);
   }
 }

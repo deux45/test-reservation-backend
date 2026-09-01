@@ -8,10 +8,6 @@ export class ResourceTypeDto {
   @ApiProperty({ example: 'Sala de reuniones' }) name: string;
   @ApiPropertyOptional() description: string | null;
 
-  /** JSON Schema the attributes of every resource of this type must satisfy. */
-  @ApiProperty({ type: 'object', additionalProperties: true })
-  attributesSchema: Record<string, unknown>;
-
   @ApiProperty() isActive: boolean;
 
   static from(entity: ResourceType): ResourceTypeDto {
@@ -20,7 +16,6 @@ export class ResourceTypeDto {
       code: entity.code,
       name: entity.name,
       description: entity.description,
-      attributesSchema: entity.attributesSchema,
       isActive: entity.isActive,
     };
   }
@@ -37,9 +32,6 @@ export class ResourceDto {
   /** IANA zone. The client formats times in this zone, not the browser's. */
   @ApiProperty({ example: 'Europe/Madrid' }) timeZone: string;
 
-  @ApiProperty({ type: 'object', additionalProperties: true })
-  attributes: Record<string, unknown>;
-
   @ApiProperty() isActive: boolean;
   @ApiPropertyOptional({ type: ResourceTypeDto }) resourceType?: ResourceTypeDto;
   @ApiProperty() createdAt: Date;
@@ -53,7 +45,6 @@ export class ResourceDto {
       capacity: entity.capacity,
       location: entity.location,
       timeZone: entity.timeZone,
-      attributes: entity.attributes,
       isActive: entity.isActive,
       resourceType: entity.resourceType ? ResourceTypeDto.from(entity.resourceType) : undefined,
       createdAt: entity.createdAt,

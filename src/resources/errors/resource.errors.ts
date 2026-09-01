@@ -25,28 +25,6 @@ export class DuplicateCodeError extends ConflictError {
 }
 
 /**
- * The resource's attributes do not satisfy its type's JSON Schema.
- *
- * Carries the individual violations so the client can highlight the offending
- * fields rather than showing one opaque sentence.
- */
-export class InvalidAttributesError extends UnprocessableError {
-  readonly code = 'INVALID_ATTRIBUTES';
-
-  constructor(violations: string[]) {
-    super('Los atributos no cumplen el esquema del tipo de recurso', { violations });
-  }
-}
-
-export class InvalidAttributesSchemaError extends UnprocessableError {
-  readonly code = 'INVALID_ATTRIBUTES_SCHEMA';
-
-  constructor(reason: string) {
-    super(`El esquema de atributos no es un JSON Schema válido: ${reason}`);
-  }
-}
-
-/**
  * Deactivating a resource that still has future confirmed reservations.
  *
  * Refused by default rather than silently cancelling other people's bookings.

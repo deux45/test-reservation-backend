@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Brackets, type EntityManager, type QueryDeepPartialEntity, Repository } from 'typeorm';
+import { Brackets, type EntityManager, Repository } from 'typeorm';
 import { type PaginatedResult } from '../../common/interfaces/pagination.interface';
 import { paginate } from '../../common/utils/paginate.util';
 import { Resource } from '../entities/resource.entity';
@@ -14,9 +14,7 @@ const SORTABLE = new Set(['name', 'code', 'capacity', 'createdAt']);
  *
  * Deliberately narrower than Partial<Resource>: it excludes relations, the
  * primary key and the immutable `code` and `resourceTypeId`, so a typo cannot
- * quietly reassign a resource to another type. It also sidesteps TypeORM's
- * QueryDeepPartialEntity, which does not map jsonb columns typed as an index
- * signature.
+ * quietly reassign a resource to another type.
  */
 export type ResourceUpdate = {
   name?: string;
@@ -24,7 +22,6 @@ export type ResourceUpdate = {
   capacity?: number | null;
   location?: string | null;
   timeZone?: string;
-  attributes?: Record<string, unknown>;
   isActive?: boolean;
   deactivatedAt?: Date | null;
 };
@@ -79,7 +76,7 @@ export class ResourceRepository {
     // One cast, at the ORM boundary, because TypeORM's deep-partial mapping
     // rejects a jsonb column typed as Record<string, unknown>. ResourceUpdate
     // above is what actually constrains callers.
-    await this.scope(manager).update(id, data as QueryDeepPartialEntity<Resource>);
+    await this.scope(manager).update(id, data);
   }
 
   async findAllPaginated(filters: FilterResourcesDto): Promise<PaginatedResult<Resource>> {

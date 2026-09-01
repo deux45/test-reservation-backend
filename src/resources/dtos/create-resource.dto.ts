@@ -1,14 +1,5 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import {
-  IsInt,
-  IsObject,
-  IsOptional,
-  IsString,
-  IsUUID,
-  Matches,
-  MaxLength,
-  Min,
-} from 'class-validator';
+import { IsInt, IsOptional, IsString, IsUUID, Matches, MaxLength, Min } from 'class-validator';
 
 export class CreateResourceDto {
   /** Tipo al que pertenece. Determina qué atributos son válidos. */
@@ -57,10 +48,4 @@ export class CreateResourceDto {
   @IsString()
   @MaxLength(64)
   timeZone?: string;
-
-  /** Atributos propios del tipo. Se validan contra su JSON Schema. */
-  @ApiPropertyOptional({ type: 'object', additionalProperties: true })
-  @IsOptional()
-  @IsObject()
-  attributes?: Record<string, unknown>;
 }

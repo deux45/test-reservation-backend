@@ -51,10 +51,6 @@ export class Resource {
   @Column({ name: 'time_zone', type: 'varchar', length: 64, default: 'UTC' })
   timeZone: string;
 
-  /** Validated against resourceType.attributesSchema on every write. */
-  @Column({ type: 'jsonb', default: () => `'{}'::jsonb` })
-  attributes: Record<string, unknown>;
-
   /**
    * Soft delete. A resource with historical reservations is never removed,
    * only deactivated -- a hard delete would orphan them, and the RESTRICT on

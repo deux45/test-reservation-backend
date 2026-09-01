@@ -8,7 +8,6 @@ import { ResourceType } from './entities/resource-type.entity';
 import { Resource } from './entities/resource.entity';
 import { ResourceTypeRepository } from './repositories/resource-type.repository';
 import { ResourceRepository } from './repositories/resource.repository';
-import { ResourceAttributesService } from './services/resource-attributes.service';
 import { ResourceTypeService } from './services/resource-type.service';
 import { ResourceService } from './services/resource.service';
 
@@ -17,13 +16,7 @@ import { ResourceService } from './services/resource.service';
     TypeOrmModule.forFeature([Resource, ResourceType, ResourceAvailability, ResourceBlock]),
   ],
   controllers: [ResourcesController, ResourceTypesController],
-  providers: [
-    ResourceService,
-    ResourceTypeService,
-    ResourceAttributesService,
-    ResourceRepository,
-    ResourceTypeRepository,
-  ],
+  providers: [ResourceService, ResourceTypeService, ResourceRepository, ResourceTypeRepository],
   // Only the repository is exported. The reservations module needs to read a
   // resource, not to create or deactivate one -- a narrow surface it cannot
   // misuse even by accident.

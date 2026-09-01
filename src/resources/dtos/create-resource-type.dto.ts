@@ -1,5 +1,5 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsObject, IsOptional, IsString, Matches, MaxLength } from 'class-validator';
+import { IsOptional, IsString, Matches, MaxLength } from 'class-validator';
 
 export class CreateResourceTypeDto {
   /** Código único y estable. Minúsculas, números y guiones. */
@@ -19,28 +19,4 @@ export class CreateResourceTypeDto {
   @IsOptional()
   @IsString()
   description?: string;
-
-  /**
-   * JSON Schema que deben cumplir los atributos de cada recurso de este tipo.
-   *
-   * Es lo que hace genérico el modelo sin una tabla por tipo: dar de alta
-   * "vehículo" es insertar una fila, no desplegar código. Se valida como
-   * esquema al guardarlo, no la primera vez que alguien crea un recurso.
-   */
-  @ApiPropertyOptional({
-    type: 'object',
-    additionalProperties: true,
-    example: {
-      type: 'object',
-      required: ['floor'],
-      properties: {
-        floor: { type: 'integer', minimum: 0 },
-        hasProjector: { type: 'boolean' },
-      },
-      additionalProperties: false,
-    },
-  })
-  @IsOptional()
-  @IsObject()
-  attributesSchema?: Record<string, unknown>;
 }

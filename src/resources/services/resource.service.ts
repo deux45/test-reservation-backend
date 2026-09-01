@@ -13,14 +13,12 @@ import {
 } from '../errors/resource.errors';
 import { ResourceRepository } from '../repositories/resource.repository';
 import { ResourceTypeRepository } from '../repositories/resource-type.repository';
-import { ResourceAttributesService } from './resource-attributes.service';
 
 @Injectable()
 export class ResourceService {
   constructor(
     private readonly resources: ResourceRepository,
     private readonly types: ResourceTypeRepository,
-    private readonly attributes: ResourceAttributesService,
   ) {}
 
   async create(dto: CreateResourceDto): Promise<ResourceDto> {
@@ -34,17 +32,7 @@ export class ResourceService {
     const timeZone = dto.timeZone ?? 'UTC';
     assertValidTimeZone(timeZone);
 
-    // The generic model is only safe because of this line: a resource cannot
-    // exist with attributes its own type does not allow.
-    this.attributes.assertValidAttributes(type.id, type.attributesSchema, dto.attributes ?? {});
-
-    const created = await this.resources.create({
-      ...dto,
-      timeZone,
-      attributes: dto.attributes ?? {},
-    });
-
-    return ResourceDto.from(created);
+    return ResourceDto.from(await this.resources.create({ ...dto, timeZone }));
   }
 
   async findAllPaginated(filters: FilterResourcesDto): Promise<PaginatedResult<ResourceDto>> {
@@ -57,18 +45,9 @@ export class ResourceService {
   }
 
   async update(id: string, dto: UpdateResourceDto): Promise<ResourceDto> {
-    const resource = await this.getOrFail(id);
+    await this.getOrFail(id);
 
     if (dto.timeZone) assertValidTimeZone(dto.timeZone);
-
-    if (dto.attributes) {
-      // Validated against the resource's OWN type: neither code nor
-      // resourceTypeId is editable, so the schema that applied at creation is
-      // still the one that applies now.
-      const type = await this.types.findById(resource.resourceTypeId);
-      if (!type) throw new ResourceTypeNotFoundError(resource.resourceTypeId);
-      this.attributes.assertValidAttributes(type.id, type.attributesSchema, dto.attributes);
-    }
 
     await this.resources.update(id, dto);
     return this.findById(id);
@@ -77,9 +56,8 @@ export class ResourceService {
   /**
    * Soft delete.
    *
-   * Reactivation is idempotent in the other direction: deactivating an
-   * already inactive resource is a no-op rather than an error, because the
-   * caller's intent is already satisfied.
+   * Deactivating an already inactive resource is a no-op rather than an error,
+   * because the caller's intent is already satisfied.
    */
   async deactivate(id: string): Promise<void> {
     const resource = await this.getOrFail(id);
