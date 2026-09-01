@@ -1,4 +1,9 @@
-import { ConflictError, NotFoundError, UnprocessableError } from '../../common/errors/domain.error';
+import {
+  ConflictError,
+  ForbiddenError,
+  NotFoundError,
+  UnprocessableError,
+} from '../../common/errors/domain.error';
 import { type Period } from '../period.vo';
 
 /** 422 — the requested range is not a valid booking period at all. */
@@ -111,9 +116,8 @@ export class ReservationAlreadyEndedError extends ConflictError {
   }
 }
 
-export class ReservationForbiddenError extends ConflictError {
+export class ReservationForbiddenError extends ForbiddenError {
   readonly code = 'RESERVATION_FORBIDDEN';
-  override readonly status = 403;
 
   constructor() {
     super('Solo puedes gestionar tus propias reservas');

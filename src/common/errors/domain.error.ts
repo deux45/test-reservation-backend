@@ -37,3 +37,14 @@ export abstract class UnprocessableError extends DomainError {
 export abstract class NotFoundError extends DomainError {
   readonly status = 404;
 }
+
+/**
+ * 403 — the caller is known and simply may not do this.
+ *
+ * Distinct from 401: telling an authenticated user to sign in again leads
+ * nowhere. Also distinct from ConflictError, which the type system enforced
+ * -- a forbidden action is not a conflict with current state.
+ */
+export abstract class ForbiddenError extends DomainError {
+  readonly status = 403;
+}
