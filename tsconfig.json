@@ -19,7 +19,17 @@
     "removeComments": false,
     "sourceMap": true,
     "outDir": "./dist",
+    /* TypeScript 6 requires rootDir whenever outDir is set, even for a
+       type-check-only pass. This config spans src/, test/ and scripts/, so the
+       root is the repository. tsconfig.build.json narrows it to ./src, which
+       is what puts main.js at dist/main.js. */
+    "rootDir": "./",
     "incremental": true,
+    /* Inside dist, so `deleteOutDir` invalidates it too. Left at the default
+       location it survives the wipe, and the next incremental build decides
+       nothing changed and emits nothing -- leaving a dist with main.js and no
+       modules beside it. */
+    "tsBuildInfoFile": "./dist/.tsbuildinfo",
     "skipLibCheck": true,
 
     /* Strict, and then some. noUncheckedIndexedAccess is what turns
@@ -36,7 +46,17 @@
     "strictPropertyInitialization": false,
 
     "esModuleInterop": true,
-    "resolveJsonModule": true
+    "resolveJsonModule": true,
+
+    /* Required by ts-jest when module is node16, and a good idea regardless:
+       it forces every type-only import to be marked as such, which is what
+       lets a transpiler process one file at a time. */
+    "isolatedModules": true,
+
+    /* Explicit rather than relying on every package under node_modules/@types
+       being pulled in automatically. TypeScript 6 no longer does that by
+       default, and being explicit is both faster and easier to reason about. */
+    "types": ["node", "jest"]
   },
   "include": ["src/**/*", "test/**/*", "scripts/**/*"],
   "exclude": ["node_modules", "dist"]
