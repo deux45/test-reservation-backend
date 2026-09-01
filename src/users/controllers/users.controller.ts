@@ -1,9 +1,16 @@
-import { Body, Controller, Get, Param, Patch, Query } from '@nestjs/common';
-import { ApiConflictResponse, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common';
+import {
+  ApiConflictResponse,
+  ApiCreatedResponse,
+  ApiOkResponse,
+  ApiOperation,
+  ApiTags,
+} from '@nestjs/swagger';
 import { CurrentUser, Roles } from '../../auth/decorators';
 import { type AuthenticatedUser } from '../../auth/ports/auth-provider.port';
 import { ApiPaginatedResponse } from '../../common/dtos/paginated-response.dto';
 import { type PaginatedResult } from '../../common/interfaces/pagination.interface';
+import { BanUserDto, CreateUserDto } from '../dtos/create-user.dto';
 import { FilterUsersDto, UpdateRoleDto, UserDto } from '../dtos/user.dto';
 import { UserService } from '../services/user.service';
 
@@ -18,11 +25,25 @@ export class UsersController {
     summary: 'Lista los usuarios',
     description:
       'Incluye cuántas reservas futuras confirmadas tiene cada uno, para que ' +
-      'el impacto de un cambio de rol sea visible antes de hacerlo.',
+      'el impacto de bloquear o degradar sea visible antes de hacerlo.',
   })
   @ApiPaginatedResponse(UserDto)
   findAll(@Query() filters: FilterUsersDto): Promise<PaginatedResult<UserDto>> {
     return this.service.findAllPaginated(filters);
+  }
+
+  @Post()
+  @ApiOperation({
+    summary: 'Crea una cuenta',
+    description:
+      'Alta por parte de un administrador, sin pasar por el registro público. ' +
+      'La delega en el proveedor de identidad, que es quien sabe cifrar la ' +
+      'contraseña. Un proveedor que no pueda crear cuentas responde 501.',
+  })
+  @ApiCreatedResponse({ type: UserDto })
+  @ApiConflictResponse({ description: 'Ya existe una cuenta con ese correo' })
+  create(@Body() dto: CreateUserDto): Promise<UserDto> {
+    return this.service.create(dto);
   }
 
   @Patch(':id/role')
@@ -40,5 +61,36 @@ export class UsersController {
     @CurrentUser() caller: AuthenticatedUser,
   ): Promise<UserDto> {
     return this.service.updateRole(id, dto.role, caller.id);
+  }
+
+  /**
+   * Blocking as a resource, not a flag on a PATCH.
+   *
+   * A ban carries a reason and an expiry, so it is a thing that gets created
+   * and destroyed rather than a boolean that gets toggled.
+   */
+  @Post(':id/ban')
+  @ApiOperation({
+    summary: 'Bloquea a un usuario',
+    description:
+      'Surte efecto de inmediato: el adaptador rechaza al usuario bloqueado ' +
+      'en cada petición, no solo al iniciar sesión, y además se revocan sus ' +
+      'sesiones abiertas. Sin `days` el bloqueo es indefinido.',
+  })
+  @ApiOkResponse({ type: UserDto })
+  @ApiConflictResponse({ description: 'Intento de bloquearse a sí mismo' })
+  ban(
+    @Param('id') id: string,
+    @Body() dto: BanUserDto,
+    @CurrentUser() caller: AuthenticatedUser,
+  ): Promise<UserDto> {
+    return this.service.ban(id, dto, caller.id);
+  }
+
+  @Delete(':id/ban')
+  @ApiOperation({ summary: 'Desbloquea a un usuario' })
+  @ApiOkResponse({ type: UserDto })
+  unban(@Param('id') id: string): Promise<UserDto> {
+    return this.service.unban(id);
   }
 }

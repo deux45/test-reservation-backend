@@ -43,6 +43,23 @@ export interface AuthProvider {
    * verifier would.
    */
   getRequestHandler(): RequestHandler | null;
+
+  /**
+   * Provisions an account without a sign-up flow, for an administrator
+   * creating one on someone else's behalf.
+   *
+   * Optional: not every provider can do it. One backed by corporate LDAP or
+   * SSO has no say in who exists, and would leave this undefined rather than
+   * throw. Callers check for it and answer 501 when it is absent, which is
+   * honest about the capability instead of pretending it failed.
+   */
+  createAccount?(input: NewAccount): Promise<{ id: string }>;
+}
+
+export interface NewAccount {
+  email: string;
+  password: string;
+  name: string;
 }
 
 /**

@@ -66,4 +66,30 @@ export class UserRepository {
   async updateRole(id: string, role: Role): Promise<void> {
     await this.repository.manager.query('UPDATE "user" SET role = $1 WHERE id = $2', [role, id]);
   }
+
+  /** Blocks an account. `until` is null for an indefinite ban. */
+  async ban(id: string, reason: string | null, until: Date | null): Promise<void> {
+    await this.repository.manager.query(
+      'UPDATE "user" SET banned = true, "banReason" = $1, "banExpires" = $2 WHERE id = $3',
+      [reason, until, id],
+    );
+  }
+
+  async unban(id: string): Promise<void> {
+    await this.repository.manager.query(
+      'UPDATE "user" SET banned = false, "banReason" = NULL, "banExpires" = NULL WHERE id = $1',
+      [id],
+    );
+  }
+
+  /**
+   * Drops every session the user holds.
+   *
+   * Belt and braces with the per-request ban check in BetterAuthProvider: that
+   * one already stops a banned session being used, and this frees the rows
+   * rather than leaving them to expire on their own.
+   */
+  async revokeSessions(id: string): Promise<void> {
+    await this.repository.manager.query('DELETE FROM "session" WHERE "userId" = $1', [id]);
+  }
 }

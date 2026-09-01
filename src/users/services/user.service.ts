@@ -1,6 +1,8 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable, NotImplementedException } from '@nestjs/common';
+import { AUTH_PROVIDER, type AuthProvider } from '../../auth/ports/auth-provider.port';
 import { ConflictError, NotFoundError } from '../../common/errors/domain.error';
 import { type PaginatedResult } from '../../common/interfaces/pagination.interface';
+import { type BanUserDto, type CreateUserDto } from '../dtos/create-user.dto';
 import { type FilterUsersDto, type Role, UserDto } from '../dtos/user.dto';
 import { UserRepository } from '../repositories/user.repository';
 
@@ -12,17 +14,30 @@ class UserNotFoundError extends NotFoundError {
   }
 }
 
-class CannotDemoteSelfError extends ConflictError {
-  readonly code = 'CANNOT_DEMOTE_SELF';
+class CannotActOnSelfError extends ConflictError {
+  readonly code = 'CANNOT_ACT_ON_SELF';
 
-  constructor() {
-    super('No puedes quitarte a ti mismo el rol de administrador');
+  constructor(action: string) {
+    super(`No puedes ${action} tu propia cuenta`);
   }
 }
 
+class EmailAlreadyUsedError extends ConflictError {
+  readonly code = 'EMAIL_ALREADY_USED';
+
+  constructor(email: string) {
+    super(`Ya existe una cuenta con el correo ${email}`, { email });
+  }
+}
+
+const MS_PER_DAY = 86_400_000;
+
 @Injectable()
 export class UserService {
-  constructor(private readonly users: UserRepository) {}
+  constructor(
+    private readonly users: UserRepository,
+    @Inject(AUTH_PROVIDER) private readonly authProvider: AuthProvider,
+  ) {}
 
   async findAllPaginated(filters: FilterUsersDto): Promise<PaginatedResult<UserDto>> {
     const page = await this.users.findAllPaginated(filters);
@@ -37,6 +52,46 @@ export class UserService {
   }
 
   /**
+   * Creates an account on someone's behalf.
+   *
+   * Delegated to the identity provider rather than inserting rows: it owns
+   * password hashing, and a "user" row without a matching "account" row could
+   * never sign in.
+   *
+   * A provider that cannot provision accounts -- one backed by corporate SSO,
+   * say -- leaves createAccount undefined, and this answers 501 rather than
+   * pretending the attempt failed.
+   */
+  async create(dto: CreateUserDto): Promise<UserDto> {
+    if (!this.authProvider.createAccount) {
+      throw new NotImplementedException(
+        `El proveedor de identidad "${this.authProvider.name}" no permite crear cuentas`,
+      );
+    }
+
+    let created: { id: string };
+    try {
+      created = await this.authProvider.createAccount({
+        email: dto.email,
+        password: dto.password,
+        name: dto.name,
+      });
+    } catch (error) {
+      // Better Auth answers 422 for a duplicate email. Translated here so the
+      // client sees this system's error catalogue, not the provider's.
+      if (isDuplicateEmail(error)) throw new EmailAlreadyUsedError(dto.email);
+      throw error;
+    }
+
+    // The provider assigns the default role; an explicit one is applied after.
+    if (dto.role && dto.role !== 'user') {
+      await this.users.updateRole(created.id, dto.role);
+    }
+
+    return this.findOne(created.id);
+  }
+
+  /**
    * Changes a user's role.
    *
    * Refuses to let an admin demote themselves. The obvious failure mode of a
@@ -44,17 +99,56 @@ export class UserService {
    * locking everyone out of the only screen that could undo it.
    */
   async updateRole(id: string, role: Role, callerId: string): Promise<UserDto> {
-    const user = await this.users.findById(id);
-    if (!user) throw new UserNotFoundError(id);
+    await this.getOrFail(id);
 
     if (id === callerId && role !== 'admin') {
-      throw new CannotDemoteSelfError();
+      throw new CannotActOnSelfError('degradar');
     }
 
     await this.users.updateRole(id, role);
-
-    const updated = await this.users.findById(id);
-    const counts = await this.users.countActiveReservationsFor([id]);
-    return UserDto.from(updated!, counts.get(id) ?? 0);
+    return this.findOne(id);
   }
+
+  /**
+   * Blocks an account, immediately.
+   *
+   * BetterAuthProvider rejects a banned user on every request, so the block
+   * takes effect at once rather than when the session expires. Sessions are
+   * revoked here as well, to free the rows instead of leaving them to lapse.
+   */
+  async ban(id: string, dto: BanUserDto, callerId: string): Promise<UserDto> {
+    await this.getOrFail(id);
+
+    if (id === callerId) throw new CannotActOnSelfError('bloquear');
+
+    const until = dto.days ? new Date(Date.now() + dto.days * MS_PER_DAY) : null;
+
+    await this.users.ban(id, dto.reason ?? null, until);
+    await this.users.revokeSessions(id);
+
+    return this.findOne(id);
+  }
+
+  async unban(id: string): Promise<UserDto> {
+    await this.getOrFail(id);
+    await this.users.unban(id);
+    return this.findOne(id);
+  }
+
+  private async findOne(id: string): Promise<UserDto> {
+    const user = await this.getOrFail(id);
+    const counts = await this.users.countActiveReservationsFor([id]);
+    return UserDto.from(user, counts.get(id) ?? 0);
+  }
+
+  private async getOrFail(id: string) {
+    const user = await this.users.findById(id);
+    if (!user) throw new UserNotFoundError(id);
+    return user;
+  }
+}
+
+function isDuplicateEmail(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error);
+  return /already exists|duplicate|USER_ALREADY_EXISTS/i.test(message);
 }

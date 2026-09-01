@@ -35,6 +35,11 @@ export class AuthModule {
 
     return {
       module: AuthModule,
+      // Global because the guards are registered application-wide and the
+      // users module needs the provider to create accounts. Importing a
+      // dynamic module in each consumer would mean calling forRoot() again
+      // and getting a second provider instance.
+      global: true,
       controllers: [AuthController],
       providers: [{ provide: AUTH_PROVIDER, useClass }, AuthenticationGuard, RolesGuard],
       // The token and the guards are exported. The provider instance and the
