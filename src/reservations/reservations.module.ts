@@ -1,7 +1,10 @@
 import { Module, type Provider } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ResourcesModule } from '../resources/resources.module';
+import { AvailabilityController } from './controllers/availability.controller';
 import { ReservationsController } from './controllers/reservations.controller';
+import { ResourceAvailability } from '../resources/entities/resource-availability.entity';
+import { ResourceBlock } from '../resources/entities/resource-block.entity';
 import { Reservation } from './entities/reservation.entity';
 import { ReservationRepository } from './repositories/reservation.repository';
 import { ActiveReservationLimitRule } from './rules/active-reservation-limit.rule';
@@ -14,6 +17,7 @@ import { SufficientCapacityRule } from './rules/sufficient-capacity.rule';
 import { WithinOperatingHoursRule } from './rules/within-operating-hours.rule';
 import { ClockService } from './services/clock.service';
 import { ReservationLockService } from './services/reservation-lock.service';
+import { AvailabilityService } from './services/availability.service';
 import { ReservationService } from './services/reservation.service';
 
 /**
@@ -60,10 +64,14 @@ const rulesProvider: Provider = {
 };
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Reservation]), ResourcesModule],
-  controllers: [ReservationsController],
+  imports: [
+    TypeOrmModule.forFeature([Reservation, ResourceAvailability, ResourceBlock]),
+    ResourcesModule,
+  ],
+  controllers: [ReservationsController, AvailabilityController],
   providers: [
     ReservationService,
+    AvailabilityService,
     ReservationLockService,
     ReservationRepository,
     ClockService,
