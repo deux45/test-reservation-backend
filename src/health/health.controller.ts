@@ -6,8 +6,10 @@ import {
   TypeOrmHealthIndicator,
 } from '@nestjs/terminus';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
+import { Public } from '../auth/decorators';
 
 @ApiTags('Health')
+@Public() // Probes and the Docker HEALTHCHECK have no session to present.
 @Controller('health')
 export class HealthController {
   constructor(
