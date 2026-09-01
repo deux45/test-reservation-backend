@@ -22,6 +22,7 @@ export default {
         'resources',
         'availability',
         'auth',
+        'users',
         'database',
         'health',
         'common',

@@ -11,6 +11,7 @@ import { validateEnv, type Env } from './config/env.validation';
 import { HealthModule } from './health/health.module';
 import { ReservationsModule } from './reservations/reservations.module';
 import { ResourcesModule } from './resources/resources.module';
+import { UsersModule } from './users/users.module';
 
 @Module({
   imports: [
@@ -55,6 +56,7 @@ import { ResourcesModule } from './resources/resources.module';
     AuthModule.forRoot(),
     ResourcesModule,
     ReservationsModule,
+    UsersModule,
     HealthModule,
   ],
   providers: [
