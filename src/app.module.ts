@@ -1,8 +1,12 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { APP_GUARD } from '@nestjs/core';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { LoggerModule } from 'nestjs-pino';
 import { randomUUID } from 'node:crypto';
+import { AuthModule } from './auth/auth.module';
+import { AuthenticationGuard } from './auth/guards/authentication.guard';
+import { RolesGuard } from './auth/guards/roles.guard';
 import { validateEnv, type Env } from './config/env.validation';
 import { HealthModule } from './health/health.module';
 
@@ -46,7 +50,16 @@ import { HealthModule } from './health/health.module';
       }),
     }),
 
+    AuthModule.forRoot(),
     HealthModule,
+  ],
+  providers: [
+    // Global, and in this order: authenticate, then authorise. Registering
+    // them here rather than per-controller makes the API secure by default --
+    // a new controller is protected unless it says @Public(), instead of open
+    // unless someone remembers to guard it.
+    { provide: APP_GUARD, useClass: AuthenticationGuard },
+    { provide: APP_GUARD, useClass: RolesGuard },
   ],
 })
 export class AppModule {}

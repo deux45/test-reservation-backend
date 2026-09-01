@@ -29,7 +29,9 @@ async function bootstrap(): Promise<void> {
 
   // Auth routes are mounted by the provider under /api/auth and must not be
   // prefixed; /health stays unprefixed so probes have a stable URL.
-  app.setGlobalPrefix('api/v1', { exclude: ['api/auth/(.*)', 'health'] });
+  // `{*path}` is the path-to-regexp v8 syntax Express 5 requires; the old
+  // `(.*)` form only survives via a deprecation shim that logs on every boot.
+  app.setGlobalPrefix('api/v1', { exclude: ['api/auth/{*path}', 'health'] });
 
   app.useGlobalPipes(
     new ValidationPipe({

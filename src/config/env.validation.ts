@@ -19,7 +19,10 @@ const envSchema = z.object({
   // Single allowed origin. Without it the session cookie never reaches the SPA.
   FRONTEND_URL: z.url(),
 
-  AUTH_PROVIDER: z.enum(['better-auth', 'jwt', 'fake']).default('better-auth'),
+  // Only values with an implementation registered in AuthModule.forRoot().
+  // A config option that maps to nothing is a trap, so `jwt` is absent until
+  // there is a JwtAuthProvider to select.
+  AUTH_PROVIDER: z.enum(['better-auth', 'fake']).default('better-auth'),
 
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']).default('info'),
 });
