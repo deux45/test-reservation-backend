@@ -11,6 +11,36 @@ y el versionado sigue [Semantic Versioning](https://semver.org/lang/es/).
 >
 > Cortar una versión: `npm run release` (o el workflow _Release_ en GitHub).
 
+## [0.2.0](///compare/v0.1.0...v0.2.0) (2026-09-01)
+
+### Funcionalidades
+
+- **database:** drop hasVideoconference from the meeting-room schema 2befca9
+- **database:** make resource attributes optional and drop hasProjector d0c2549
+- **database:** remove the identifier attributes from every type 8b9b22d
+- **database:** seed the resource type catalogue 6f2ff03
+- **reservations:** add pure interval arithmetic for availability 8a1d92c
+- **reservations:** add the advisory lock, clock and repository 1f8cd64
+- **reservations:** add the Period value object and domain errors 4bb1998
+- **reservations:** add the reservation entity and rule contract 965ea2b
+- **reservations:** add the seven business rules 3e0a60e
+- **reservations:** create, reschedule, cancel and list reservations 697972d
+- **reservations:** expose GET /resources/:id/availability 8c8199a
+- **resources:** remove per-type attributes entirely 52415ff
+- **users:** add user listing and role management d93bb7b
+- **users:** let an admin create and block accounts ddd8c25
+- **users:** let an admin edit name and email 6664ca4
+
+### Correcciones
+
+- **common:** add a ForbiddenError base instead of overriding a status eb351b7
+- **database:** backfill Spanish labels on the meeting-room schema bfc2007
+
+### Documentación
+
+- correct the rule-registration pattern and add two more gotchas 9550193
+- record the operational gotchas found while implementing 4980dba
+
 ## 0.1.0 (2026-09-01)
 
 ### Funcionalidades
