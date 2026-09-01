@@ -1,0 +1,43 @@
+{
+  "compilerOptions": {
+    /* node16 rather than the classic commonjs/node pair: TypeScript 6
+       deprecates moduleResolution "node10" and it stops working in 7.
+       package.json has no "type": "module", so these files still emit
+       CommonJS, which is what NestJS and ts-jest expect. */
+    "module": "node16",
+    "moduleResolution": "node16",
+    "target": "ES2023",
+    "lib": ["ES2023"],
+
+    /* NestJS dependency injection reads design:paramtypes at runtime, which
+       only exists when these two are on. Turning either off breaks the
+       injector at boot, not at compile time. */
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+
+    "declaration": false,
+    "removeComments": false,
+    "sourceMap": true,
+    "outDir": "./dist",
+    "incremental": true,
+    "skipLibCheck": true,
+
+    /* Strict, and then some. noUncheckedIndexedAccess is what turns
+       `array[0]` into `T | undefined`, which is exactly the class of bug an
+       interval-subtraction routine is prone to. */
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "noFallthroughCasesInSwitch": true,
+    "forceConsistentCasingInFileNames": true,
+
+    /* strictPropertyInitialization is off: TypeORM entities and DTOs are
+       populated by the framework, so `!` on every field would be noise. */
+    "strictPropertyInitialization": false,
+
+    "esModuleInterop": true,
+    "resolveJsonModule": true
+  },
+  "include": ["src/**/*", "test/**/*", "scripts/**/*"],
+  "exclude": ["node_modules", "dist"]
+}

@@ -1,0 +1,10 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    /* TypeScript 6 requires this to be explicit. Without it the build emits
+       dist/src/main.js instead of dist/main.js, which silently breaks the
+       Dockerfile CMD and `npm run start:prod`. */
+    "rootDir": "./src"
+  },
+  "exclude": ["node_modules", "dist", "test", "scripts", "**/*.spec.ts", "**/*.e2e-spec.ts"]
+}
