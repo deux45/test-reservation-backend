@@ -1,6 +1,6 @@
 {
   "$schema": "https://raw.githubusercontent.com/absolute-version/commit-and-tag-version/master/schema.json",
-  "header": "# Changelog\n\nTodas las versiones de este proyecto se documentan aquí.\n\nEl formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)\ny el versionado sigue [Semantic Versioning](https://semver.org/lang/es/).\n",
+  "header": "# Changelog\n\nTodas las versiones de este proyecto se documentan aquí.\n\nEl formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)\ny el versionado sigue [Semantic Versioning](https://semver.org/lang/es/).\n\n> Fichero generado por `commit-and-tag-version` a partir de los mensajes de\n> commit. **No se edita a mano**: si una entrada está mal redactada, el problema\n> está en el mensaje del commit.\n>\n> Cortar una versión: `npm run release` (o el workflow _Release_ en GitHub).\n",
   "types": [
     { "type": "feat", "section": "Funcionalidades" },
     { "type": "fix", "section": "Correcciones" },
