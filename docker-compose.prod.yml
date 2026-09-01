@@ -1,0 +1,80 @@
+name: reservations-prod
+
+# Shared hardening applied to every application container.
+x-hardening: &hardening
+  restart: unless-stopped
+  read_only: true
+  tmpfs: [/tmp]
+  security_opt: ['no-new-privileges:true']
+  cap_drop: [ALL]
+  logging:
+    driver: json-file
+    options: { max-size: '10m', max-file: '3' }
+
+services:
+  postgres:
+    # Pin the digest as well as the tag. A tag can be repointed; a digest
+    # cannot, which is the same reasoning that pins the GitHub Actions by SHA.
+    # Resolve with: docker buildx imagetools inspect postgres:18-alpine
+    image: postgres:18-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      # Never the password itself in this file.
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+    secrets:
+      - postgres_password
+    volumes:
+      # PostgreSQL 18 path. See the note in docker-compose.yml.
+      - postgres-data:/var/lib/postgresql
+    # No `ports`: the database is reachable only from the internal network.
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits: { cpus: '1.0', memory: 1G }
+
+  api:
+    <<: *hardening
+    image: ghcr.io/${GITHUB_REPOSITORY:-local}/reservations-api:${IMAGE_TAG:-latest}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: '3000'
+      DATABASE_URL: postgres://${POSTGRES_USER}@postgres:5432/${POSTGRES_DB}
+      BETTER_AUTH_URL: ${API_PUBLIC_URL}
+      FRONTEND_URL: ${FRONTEND_URL}
+      AUTH_PROVIDER: better-auth
+      LOG_LEVEL: info
+    secrets:
+      - better_auth_secret
+      - postgres_password
+    ports:
+      - '3000:3000'
+    deploy:
+      # Two instances is not incidental: it is the operational proof of the
+      # design. With two APIs competing, service-level validation alone would
+      # let a double booking through -- only the EXCLUDE constraint in
+      # migration 1756700000004 guarantees the invariant.
+      replicas: 2
+      resources:
+        limits: { cpus: '1.0', memory: 512M }
+
+secrets:
+  postgres_password:
+    file: ./secrets/postgres_password.txt
+  better_auth_secret:
+    file: ./secrets/better_auth_secret.txt
+
+volumes:
+  postgres-data:
+
+networks:
+  default:
+    name: reservations-net

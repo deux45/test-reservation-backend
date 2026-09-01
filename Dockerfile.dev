@@ -1,0 +1,15 @@
+# Development image: source is bind-mounted, so this layer only carries deps.
+FROM node:24-alpine
+
+WORKDIR /app
+RUN apk add --no-cache tini
+
+COPY package.json package-lock.json .npmrc ./
+# --ignore-scripts: no postinstall runs. Vector #1 of every npm worm.
+RUN npm ci --ignore-scripts
+
+COPY . .
+
+EXPOSE 3000 9229
+ENTRYPOINT ["/sbin/tini", "--"]
+CMD ["npm", "run", "start:dev"]

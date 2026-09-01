@@ -1,0 +1,68 @@
+name: reservations-dev
+
+services:
+  postgres:
+    image: postgres:18-alpine
+    environment:
+      POSTGRES_USER: reservations
+      POSTGRES_PASSWORD: reservations
+      POSTGRES_DB: reservations
+      POSTGRES_INITDB_ARGS: '--encoding=UTF8 --locale=C.UTF-8'
+    ports:
+      - '5432:5432'
+    volumes:
+      # PostgreSQL 18 moved the declared VOLUME from /var/lib/postgresql/data
+      # to /var/lib/postgresql (PGDATA is now /var/lib/postgresql/18/docker).
+      # A compose file copied from a PG 17 tutorial mounts the wrong path and
+      # the data silently does not persist across restarts.
+      - postgres-data:/var/lib/postgresql
+      - ./docker/postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U reservations -d reservations']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    depends_on:
+      postgres:
+        # Not just "started": waits until Postgres actually accepts connections.
+        condition: service_healthy
+    environment:
+      NODE_ENV: development
+      PORT: '3000'
+      DATABASE_URL: postgres://reservations:reservations@postgres:5432/reservations
+      BETTER_AUTH_SECRET: dev-only-secret-not-for-production-32ch
+      BETTER_AUTH_URL: http://localhost:3000
+      FRONTEND_URL: http://localhost:3001
+      AUTH_PROVIDER: better-auth
+      LOG_LEVEL: debug
+    ports:
+      - '3000:3000'
+      - '9229:9229' # Node inspector
+    volumes:
+      - ./src:/app/src
+      - ./test:/app/test
+      - ./scripts:/app/scripts
+      # Anonymous volume: the container's node_modules is not shadowed by the
+      # host's, which matters because they are built for different platforms.
+      - /app/node_modules
+
+  adminer:
+    image: adminer:5
+    ports:
+      - '8080:8080'
+    depends_on:
+      - postgres
+
+volumes:
+  postgres-data:
+
+networks:
+  default:
+    # The web repo joins this network by name.
+    name: reservations-net
