@@ -1,0 +1,26 @@
+{
+  "$schema": "https://raw.githubusercontent.com/absolute-version/commit-and-tag-version/master/schema.json",
+  "header": "# Changelog\n\nTodas las versiones de este proyecto se documentan aquí.\n\nEl formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)\ny el versionado sigue [Semantic Versioning](https://semver.org/lang/es/).\n",
+  "types": [
+    { "type": "feat", "section": "Funcionalidades" },
+    { "type": "fix", "section": "Correcciones" },
+    { "type": "perf", "section": "Rendimiento" },
+    { "type": "revert", "section": "Reversiones" },
+    { "type": "docs", "section": "Documentación", "hidden": false },
+    { "type": "build", "section": "Build y dependencias", "hidden": false },
+    { "type": "refactor", "section": "Refactor", "hidden": true },
+    { "type": "test", "section": "Pruebas", "hidden": true },
+    { "type": "style", "hidden": true },
+    { "type": "ci", "hidden": true },
+    { "type": "chore", "hidden": true }
+  ],
+  "commitUrlFormat": "{{host}}/{{owner}}/{{repository}}/commit/{{hash}}",
+  "compareUrlFormat": "{{host}}/{{owner}}/{{repository}}/compare/{{previousTag}}...{{currentTag}}",
+  "issueUrlFormat": "{{host}}/{{owner}}/{{repository}}/issues/{{id}}",
+  "releaseCommitMessageFormat": "chore(release): {{currentTag}}",
+  "tagPrefix": "v",
+  "skip": {
+    "commit": false,
+    "tag": false
+  }
+}
