@@ -419,7 +419,7 @@ siendo abiertas a extensión y los tests siguen corriendo sin base de datos&mdas
 
 - **`period.vo.ts`** &mdash; ~40 líneas donde vive la semántica `[start, end)`. Función pura,
   se prueba sin base de datos y es el sitio único donde puede estar el bug de la frontera.
-- **`rules/`** &mdash; ocho clases pequeñas registradas como _multi-provider_. Es la
+- **`rules/`** &mdash; siete clases pequeñas reunidas por un proveedor de factoría. Es la
   demostración concreta del principio abierto/cerrado y no cuesta ninguna capa extra.
 - **`repositories/`** &mdash; la convención del CRM. Mantiene `QueryBuilder` fuera de los
   servicios, que es lo que la separación dominio/infraestructura buscaba de verdad.
@@ -549,7 +549,7 @@ export class ReservationService {
     private readonly resourceRepository: ResourceRepository,
     private readonly lockService: ReservationLockService,
     private readonly clock: ClockService,
-    // Las reglas llegan como array por multi-provider (ver reservations.module.ts).
+    // Las reglas llegan como array desde una factoria (ver reservations.module.ts).
     @Inject(RESERVATION_RULES) private readonly rules: ReservationRule[],
   ) {}
 
@@ -664,7 +664,10 @@ const rules = [
     ...rules,
     // Único token del módulo, y está justificado: inyectar una LISTA de reglas
     // sin que el servicio conozca ninguna de ellas por su nombre.
-    ...rules.map((useClass) => ({ provide: RESERVATION_RULES, useClass, multi: true })),
+    // NO `multi: true`: eso es de Angular. Nest no tiene multi-providers y se
+    // queda con un solo valor, asi que el servicio inyecta UNA regla en vez de
+    // la lista y revienta en la primera reserva. La factoria es el idioma Nest.
+    { provide: RESERVATION_RULES, useFactory: (...r) => r, inject: rules },
   ],
   exports: [ReservationService],
 })
@@ -1316,7 +1319,7 @@ de carpetas.
 | Principio                         | Dónde vive                                                                                                                                                                                                                                  | Qué se gana                                                                                                                              |
 | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
 | **S** · Responsabilidad única     | Servicios separados por responsabilidad, como en el CRM: `ReservationService` (escrituras), `AvailabilityService` (cálculo de huecos), `ReservationLockService` (concurrencia). `Period` solo sabe de rangos; el repositorio solo persiste. | Ningún fichero pasa de ~150 líneas. Cuando algo falla, el sitio donde mirar es obvio.                                                    |
-| **O** · Abierto/cerrado           | `ReservationRule` + multi-provider. Y `resource_type.attributes_schema`, que permite un tipo de recurso nuevo sin desplegar código.                                                                                                         | "Máximo 2 reservas por día" = una clase nueva y una línea en el array. `ReservationService` no se toca.                                  |
+| **O** · Abierto/cerrado           | `ReservationRule` + proveedor de factoría. Y `resource_type.attributes_schema`, que permite un tipo de recurso nuevo sin desplegar código.                                                                                                  | "Máximo 2 reservas por día" = una clase nueva y una línea en el array. `ReservationService` no se toca.                                  |
 | **L** · Sustitución de Liskov     | `ReservationRepository` es una clase concreta que en los tests unitarios se sustituye con `overrideProvider(ReservationRepository).useClass(InMemoryReservationRepository)`. Ambas pasan el mismo contract test.                            | Los tests de reglas corren en milisegundos sin base de datos, y la fake no puede desviarse del contrato sin que salte una prueba.        |
 | **I** · Segregación de interfaces | `ReservationRule` expone **un solo método**, `check()`. Los servicios de `reservations` consumen `ResourceRepository` con métodos de lectura, no el `ResourceService` completo.                                                             | Una regla no puede hacer nada más que validar. La superficie mínima es la que se puede probar exhaustivamente.                           |
 | **D** · Inversión de dependencias | Los servicios dependen de `ReservationRepository`, **nunca de `Repository<Reservation>` de TypeORM**: el `QueryBuilder` no sale de la carpeta `repositories/`. `ClockService` hace el tiempo inyectable.                                    | Cambiar de ORM toca una carpeta. "No reservar en el pasado" se prueba de forma determinista con un reloj fijo, sin `jest.useFakeTimers`. |
