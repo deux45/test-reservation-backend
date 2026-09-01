@@ -67,6 +67,30 @@ export class UserRepository {
     await this.repository.manager.query('UPDATE "user" SET role = $1 WHERE id = $2', [role, id]);
   }
 
+  findByEmail(email: string): Promise<UserAccount | null> {
+    return this.repository.findOne({ where: { email } });
+  }
+
+  /**
+   * Updates the editable profile fields.
+   *
+   * Explicit columns rather than saving the entity, for the same reason as
+   * updateRole: Better Auth owns these rows, and a full save would write back
+   * every field this projection knows and revert the rest. Also bumps
+   * updatedAt, which Better Auth maintains and this write would otherwise
+   * leave stale.
+   */
+  async updateProfile(id: string, name?: string, email?: string): Promise<void> {
+    await this.repository.manager.query(
+      `UPDATE "user"
+          SET name        = COALESCE($1, name),
+              email       = COALESCE($2, email),
+              "updatedAt" = now()
+        WHERE id = $3`,
+      [name ?? null, email ?? null, id],
+    );
+  }
+
   /** Blocks an account. `until` is null for an indefinite ban. */
   async ban(id: string, reason: string | null, until: Date | null): Promise<void> {
     await this.repository.manager.query(

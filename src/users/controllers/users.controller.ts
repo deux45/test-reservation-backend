@@ -10,7 +10,7 @@ import { CurrentUser, Roles } from '../../auth/decorators';
 import { type AuthenticatedUser } from '../../auth/ports/auth-provider.port';
 import { ApiPaginatedResponse } from '../../common/dtos/paginated-response.dto';
 import { type PaginatedResult } from '../../common/interfaces/pagination.interface';
-import { BanUserDto, CreateUserDto } from '../dtos/create-user.dto';
+import { BanUserDto, CreateUserDto, UpdateUserDto } from '../dtos/create-user.dto';
 import { FilterUsersDto, UpdateRoleDto, UserDto } from '../dtos/user.dto';
 import { UserService } from '../services/user.service';
 
@@ -44,6 +44,20 @@ export class UsersController {
   @ApiConflictResponse({ description: 'Ya existe una cuenta con ese correo' })
   create(@Body() dto: CreateUserDto): Promise<UserDto> {
     return this.service.create(dto);
+  }
+
+  @Patch(':id')
+  @ApiOperation({
+    summary: 'Edita nombre y correo',
+    description:
+      'El correo es la credencial con la que esa persona inicia sesión, así ' +
+      'que cambiarlo cambia cómo entra. El rol se cambia por su propia ruta, ' +
+      'porque tiene su propia regla: nadie puede degradarse a sí mismo.',
+  })
+  @ApiOkResponse({ type: UserDto })
+  @ApiConflictResponse({ description: 'El correo ya está en uso por otra cuenta' })
+  update(@Param('id') id: string, @Body() dto: UpdateUserDto): Promise<UserDto> {
+    return this.service.update(id, dto);
   }
 
   @Patch(':id/role')

@@ -33,6 +33,26 @@ export class CreateUserDto {
   role?: Role;
 }
 
+export class UpdateUserDto {
+  /** Nombre visible. */
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  name?: string;
+
+  /**
+   * Correo. Debe seguir siendo único.
+   *
+   * Cambiarlo cambia la credencial con la que esa persona inicia sesión, así
+   * que la interfaz lo advierte antes de guardar.
+   */
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsEmail()
+  email?: string;
+}
+
 export class BanUserDto {
   /** Motivo del bloqueo. Queda registrado. */
   @ApiPropertyOptional({ example: 'Uso indebido de las salas' })

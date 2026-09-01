@@ -2,7 +2,7 @@ import { Inject, Injectable, NotImplementedException } from '@nestjs/common';
 import { AUTH_PROVIDER, type AuthProvider } from '../../auth/ports/auth-provider.port';
 import { ConflictError, NotFoundError } from '../../common/errors/domain.error';
 import { type PaginatedResult } from '../../common/interfaces/pagination.interface';
-import { type BanUserDto, type CreateUserDto } from '../dtos/create-user.dto';
+import { type BanUserDto, type CreateUserDto, type UpdateUserDto } from '../dtos/create-user.dto';
 import { type FilterUsersDto, type Role, UserDto } from '../dtos/user.dto';
 import { UserRepository } from '../repositories/user.repository';
 
@@ -89,6 +89,28 @@ export class UserService {
     }
 
     return this.findOne(created.id);
+  }
+
+  /**
+   * Updates the editable profile fields.
+   *
+   * Email is the credential this person signs in with, so changing it changes
+   * how they get in. The interface warns before saving; this checks that the
+   * new address is free, because the unique index would otherwise surface as
+   * a raw database error.
+   */
+  async update(id: string, dto: UpdateUserDto): Promise<UserDto> {
+    await this.getOrFail(id);
+
+    if (dto.email) {
+      const existing = await this.users.findByEmail(dto.email);
+      // Re-saving the same address is a no-op, not a conflict: an edit form
+      // sends every field, including the ones that did not change.
+      if (existing && existing.id !== id) throw new EmailAlreadyUsedError(dto.email);
+    }
+
+    await this.users.updateProfile(id, dto.name, dto.email);
+    return this.findOne(id);
   }
 
   /**
