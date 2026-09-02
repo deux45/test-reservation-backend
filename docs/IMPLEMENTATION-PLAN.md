@@ -2214,16 +2214,15 @@ explícita.
 | **F13** · Recursos            | DataGrid, alta y edición, formulario dinámico según el JSON Schema.                                                                            | Se crea una sala desde la interfaz y aparece en la lista.                                                |        |   3 |
 | **F14** · Reservas            | Listado con filtros, `BookingDialog`, huecos libres, manejo del 409, cancelar.                                                                 | Reservar un hueco ocupado muestra el conflicto y ofrece alternativas.                                    |        |   4 |
 | **F15** · Pruebas de front    | Vitest + RTL + MSW, agenda semanal, accesibilidad, Playwright.                                                                                 | Los cuatro recorridos de Playwright pasan en CI.                                                         |        |   4 |
-| **F16** · Reflexión           | El documento del enunciado. **Se escribe al final pero se anota desde F0.**                                                                    | Cubre los seis puntos de §8.                                                                             |   ✅   |   3 |
 
-**Total ≈ 57 h · solo núcleo ≈ 33 h**
+**Total ≈ 54 h · solo núcleo ≈ 30 h**
 
 ### 7.1 Trabajar con IA de forma que se pueda contar
 
 El enunciado quiere observar cómo trabajas con IA, y eso solo se enseña si queda rastro.
 Durante todas las fases, mantén un `NOTES.md` **fuera del control de versiones** donde
 anotes, en una línea, cada vez que: aceptaste una sugerencia sin cambios, la corregiste y
-por qué, o la descartaste. En F16 ese fichero es el borrador del documento reflexivo.
+por qué, o la descartaste. Ese fichero es el borrador del documento reflexivo de §8.
 
 Dos hábitos que dan material concreto: pide a la IA que **ataque** tu propio diseño
 (_"¿qué se rompe con dos instancias de la API?"_) en vez de solo generar código, y
