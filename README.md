@@ -25,11 +25,11 @@ That builds the images, starts PostgreSQL, waits until it actually accepts
 connections, applies the ten migrations, loads demo data and leaves the API
 listening.
 
-| Service | URL                          |                                                     |
-| ------- | ---------------------------- | --------------------------------------------------- |
-| API     | http://localhost:3000/api/v1 |                                                     |
-| Swagger | http://localhost:3000/docs   | interactive documentation                           |
-| Adminer | http://localhost:8080        | server `postgres`, user and password `reservations` |
+| Service | URL                            |                                                     |
+| ------- | ------------------------------ | --------------------------------------------------- |
+| API     | http://localhost:3000/api/v1   |                                                     |
+| Swagger | http://localhost:3000/api/docs | interactive documentation                           |
+| Adminer | http://localhost:8080          | server `postgres`, user and password `reservations` |
 
 Demo accounts, all with the password `Reservas2026!`:
 
@@ -170,7 +170,7 @@ table.
 ## Endpoints
 
 Everything under `/api/v1`. The live, executable reference is at
-[http://localhost:3000/docs](http://localhost:3000/docs).
+[http://localhost:3000/api/docs](http://localhost:3000/api/docs).
 
 ### Reservations
 
@@ -370,4 +370,4 @@ the commit message.
 - [`docs/IMPLEMENTATION-PLAN.md`](docs/IMPLEMENTATION-PLAN.md) — the full plan,
   with the design decisions and an appendix of operational gotchas found while
   implementing. Written in Spanish, as agreed for the planning document.
-- [http://localhost:3000/docs](http://localhost:3000/docs) — Swagger.
+- [http://localhost:3000/api/docs](http://localhost:3000/api/docs) — Swagger.

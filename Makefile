@@ -39,7 +39,7 @@ help: ## Muestra esta ayuda
 start: up migrate seed ## Arranque completo desde cero: contenedores, esquema y datos de demo
 	@echo ""
 	@echo "  API      http://localhost:3000"
-	@echo "  Swagger  http://localhost:3000/docs"
+	@echo "  Swagger  http://localhost:3000/api/docs"
 	@echo "  Adminer  http://localhost:8080"
 	@echo ""
 	@echo "  Entra con admin@reservas.dev / Reservas2026!"
@@ -151,7 +151,12 @@ shell: ## Abre una shell dentro del contenedor de la API
 	$(COMPOSE) exec api sh
 
 openapi: ## Regenera openapi.json (lo consume el frontend con `make api-types`)
+	@# Se genera dentro del contenedor y se copia fuera: la raíz del proyecto no
+	@# está bind-mounteada, así que un fichero escrito en /app no aparece en el
+	@# host. Copiarlo evita exigir Node en el equipo sólo para esto.
 	$(API) npm run openapi:generate
+	docker compose cp api:/app/openapi.json ./openapi.json
+	@echo "openapi.json actualizado."
 
 build: ## Construye la imagen de producción
 	docker build -t reservations-api:local .
