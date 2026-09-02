@@ -40,7 +40,7 @@ Backend: NestJS + PostgreSQL + TypeORM · Frontend: Next.js + React + MUI
 | Semántica del intervalo   | **Semiabierto `[start, end)`**                                                                                  | 10:00–11:00 y 11:00–12:00 son contiguas, no conflictivas.                                                            | Cerrado `[]`: haría chocar reservas consecutivas.                                                                                                                    |
 | Concurrencia              | **Advisory lock por recurso** + constraint                                                                      | Serializa solo el mismo recurso. Permite un 409 con datos útiles.                                                    | `SERIALIZABLE`: obliga a bucles de reintento.                                                                                                                        |
 | Tipos de recurso          | **Una tabla + `jsonb` validado con JSON Schema**                                                                | Añadir "vehículo" es insertar una fila, no desplegar código.                                                         | Tabla por tipo o herencia: rompe las consultas transversales.                                                                                                        |
-| Estilo de capas           | **Módulo por dominio con carpetas planas** (`controllers/`, `dtos/`, `entities/`, `repositories/`, `services/`) | Convención estándar de NestJS y la misma que ya usa `avanti-crm-backend`. Se navega sin mapa.                        | Hexagonal con `domain/application/infrastructure`: triplica ficheros sin añadir garantías a esta escala (§3.1).                                                      |
+| Estilo de capas           | **Módulo por dominio con carpetas planas** (`controllers/`, `dtos/`, `entities/`, `repositories/`, `services/`) | Convención estándar de NestJS. Se navega sin mapa.                                                                   | Hexagonal con `domain/application/infrastructure`: triplica ficheros sin añadir garantías a esta escala (§3.1).                                                      |
 | Autenticación             | **Better Auth tras un adaptador propio** (§3.10), mismo Postgres, sesión por cookie                             | Un proveedor de identidad para API y front, detrás de un puerto de dos métodos. Sustituirlo cuesta 1 fichero, no 45. | El paquete comunitario `@thallesp/nestjs-better-auth`: son 40 líneas propias las que ahorra, y a cambio mete una dependencia no oficial en la ruta de autenticación. |
 | Zona horaria              | **`timestamptz` siempre**; TZ del recurso solo para calcular                                                    | UTC en disco elimina los bugs de horario de verano.                                                                  | `timestamp` sin zona.                                                                                                                                                |
 | Versiones de dependencias | **Cooldown de 7 días** sobre la última estable                                                                  | Todos los incidentes de 2025–2026 se detectaron en < 7 días.                                                         | Instalar `latest`: es exactamente el vector de ataque.                                                                                                               |
@@ -335,8 +335,8 @@ security:
 
 Monolito modular con **módulo por dominio** y carpetas planas por tipo de artefacto
 (`controllers/`, `dtos/`, `entities/`, `repositories/`, `services/`). Es la convención
-estándar de NestJS y la misma que ya se usa en `avanti-crm-backend`: cualquiera que abra
-el repositorio sabe dónde está todo sin necesidad de un mapa.
+estándar de NestJS: cualquiera que abra el repositorio sabe dónde está todo sin
+necesidad de un mapa.
 
 Dos módulos de dominio: **`resources`** (qué se puede reservar) y **`reservations`**
 (quién lo reserva y cuándo).
@@ -1872,9 +1872,9 @@ no un requisito: nada de lo que hace es inaccesible sin él.
 
 ### 5.5 Versionado semántico y changelog
 
-Misma herramienta que `avanti-crm-backend`: **`commit-and-tag-version`** (el fork
-mantenido de `standard-version`, que está archivado desde 2022). El comando es el mismo,
-`npm run release`, y produce el mismo formato de commit, `chore(release): v0.2.0`.
+**`commit-and-tag-version`**: el fork mantenido de `standard-version`, que está
+archivado desde 2022. Se corta una versión con `npm run release`, que genera un
+commit `chore(release): 0.2.0` y su etiqueta `v0.2.0`.
 
 La cadena completa es corta y cada eslabón existe por una razón:
 
