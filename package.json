@@ -29,7 +29,7 @@
     "migration:show:dev": "typeorm-ts-node-commonjs migration:show -d src/database/data-source.ts",
     "seed": "node dist/database/seeds/run-seeds.js",
     "seed:dev": "nest build && node dist/database/seeds/run-seeds.js",
-    "openapi:generate": "tsx scripts/generate-openapi.ts",
+    "openapi:generate": "node scripts/generate-openapi.mjs",
     "audit:osv": "node scripts/osv-check.mjs",
     "audit:signatures": "npm audit signatures",
     "audit:vulns": "npm audit --audit-level=high",

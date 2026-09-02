@@ -1,0 +1,1686 @@
+{
+  "openapi": "3.0.0",
+  "paths": {
+    "/api/v1/me": {
+      "get": {
+        "operationId": "AuthController_me",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Usuario de la sesión actual",
+        "tags": ["Auth"]
+      }
+    },
+    "/api/v1/resources": {
+      "get": {
+        "operationId": "ResourcesController_findAll",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "description": "Página, empezando en 1.",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "description": "Resultados por página.",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "type": "number"
+            }
+          },
+          {
+            "name": "sortOrder",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "default": "DESC",
+              "type": "string",
+              "enum": ["ASC", "DESC"]
+            }
+          },
+          {
+            "name": "sortBy",
+            "required": false,
+            "in": "query",
+            "description": "Sort field. Each controller restricts the allowed values, because\ninterpolating a client-supplied column name into ORDER BY is an injection\nvector that no parameter binding protects against.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "typeId",
+            "required": false,
+            "in": "query",
+            "description": "Solo recursos de este tipo.",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "description": "Busca en nombre y código.",
+            "schema": {
+              "example": "aurora",
+              "type": "string"
+            }
+          },
+          {
+            "name": "minCapacity",
+            "required": false,
+            "in": "query",
+            "description": "Aforo mínimo.",
+            "schema": {
+              "minimum": 1,
+              "example": 8,
+              "type": "number"
+            }
+          },
+          {
+            "name": "location",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "example": "Planta 2",
+              "type": "string"
+            }
+          },
+          {
+            "name": "isActive",
+            "required": false,
+            "in": "query",
+            "description": "Por defecto muestra activos e inactivos.",
+            "schema": {
+              "example": true,
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/PaginatedResponseDto"
+                    },
+                    {
+                      "properties": {
+                        "data": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/ResourceDto"
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "summary": "Lista recursos con filtros y paginación",
+        "tags": ["Resources"]
+      },
+      "post": {
+        "description": "Alta de un recurso reservable dentro de un tipo existente.",
+        "operationId": "ResourcesController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateResourceDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResourceDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Ya existe un recurso con ese código"
+          },
+          "422": {
+            "description": "La zona horaria no es válida"
+          }
+        },
+        "summary": "Crea un recurso",
+        "tags": ["Resources"]
+      }
+    },
+    "/api/v1/resources/{id}": {
+      "get": {
+        "operationId": "ResourcesController_findOne",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResourceDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "El recurso no existe"
+          }
+        },
+        "summary": "Detalle de un recurso, con su tipo y horario semanal",
+        "tags": ["Resources"]
+      },
+      "patch": {
+        "description": "code y resourceTypeId no son editables: ambos identifican al recurso.",
+        "operationId": "ResourcesController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateResourceDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResourceDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Actualiza un recurso",
+        "tags": ["Resources"]
+      },
+      "delete": {
+        "description": "Baja lógica. El recurso deja de poder reservarse pero su histórico de reservas se conserva intacto, que es la razón de no borrarlo.",
+        "operationId": "ResourcesController_deactivate",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "summary": "Da de baja un recurso",
+        "tags": ["Resources"]
+      }
+    },
+    "/api/v1/resources/{id}/activation": {
+      "post": {
+        "operationId": "ResourcesController_activate",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResourceDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Reactiva un recurso dado de baja",
+        "tags": ["Resources"]
+      }
+    },
+    "/api/v1/resource-types": {
+      "get": {
+        "description": "Familias de recursos reservables: salas, portátiles, vehículos.",
+        "operationId": "ResourceTypesController_findAll",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ResourceTypeDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Lista los tipos de recurso",
+        "tags": ["Resource types"]
+      },
+      "post": {
+        "description": "Dar de alta una familia nueva (vehículo, proyector) es esta llamada, no un despliegue.",
+        "operationId": "ResourceTypesController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateResourceTypeDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResourceTypeDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Ya existe un tipo con ese código"
+          }
+        },
+        "summary": "Crea un tipo de recurso",
+        "tags": ["Resource types"]
+      }
+    },
+    "/api/v1/resource-types/{id}": {
+      "get": {
+        "operationId": "ResourceTypesController_findOne",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResourceTypeDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Detalle de un tipo de recurso",
+        "tags": ["Resource types"]
+      }
+    },
+    "/api/v1/reservations": {
+      "post": {
+        "description": "Aplica todas las reglas de negocio y garantiza que no haya solapes. Los intervalos son semiabiertos `[inicio, fin)`: una reserva que termina a las 11:00 no choca con otra que empieza a las 11:00.",
+        "operationId": "ReservationsController_create",
+        "parameters": [
+          {
+            "name": "idempotency-key",
+            "required": true,
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Si se repite la petición con la misma clave se devuelve la reserva ya creada en lugar de crear una segunda.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateReservationDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReservationDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "El horario ya está ocupado (`OVERLAPPING_RESERVATION`, con el rango en conflicto), o alguna regla lo impide: fuera de horario, recurso bloqueado o límite de reservas alcanzado."
+          },
+          "422": {
+            "description": "Rango inválido, en el pasado, o asistentes por encima del aforo."
+          }
+        },
+        "summary": "Crea una reserva",
+        "tags": ["Reservations"]
+      },
+      "get": {
+        "description": "Sin rol admin solo se devuelven las propias, ignorando el parámetro userId. El rango devuelve las reservas que **se solapan** con él.",
+        "operationId": "ReservationsController_findAll",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "description": "Página, empezando en 1.",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "description": "Resultados por página.",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "type": "number"
+            }
+          },
+          {
+            "name": "sortOrder",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "default": "DESC",
+              "type": "string",
+              "enum": ["ASC", "DESC"]
+            }
+          },
+          {
+            "name": "sortBy",
+            "required": false,
+            "in": "query",
+            "description": "Sort field. Each controller restricts the allowed values, because\ninterpolating a client-supplied column name into ORDER BY is an injection\nvector that no parameter binding protects against.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "resourceId",
+            "required": false,
+            "in": "query",
+            "description": "Filtra por recurso.",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "userId",
+            "required": false,
+            "in": "query",
+            "description": "Filtra por usuario. Sin rol admin se ignora: solo verás las tuyas.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "resourceTypeId",
+            "required": false,
+            "in": "query",
+            "description": "Todas las reservas de una familia de recursos.",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "description": "Repetible: `?status=CONFIRMED&status=CANCELLED`.",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": ["CONFIRMED", "CANCELLED", "COMPLETED"]
+              }
+            }
+          },
+          {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "description": "Devuelve las reservas que **se solapan** con el rango, no las contenidas\nen él: preguntar \"qué hay reservado esta semana\" debe incluir la reunión\nque empezó el viernes y termina el lunes.",
+            "schema": {
+              "example": "2026-09-01T00:00:00Z",
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "example": "2026-09-30T23:59:59Z",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/PaginatedResponseDto"
+                    },
+                    {
+                      "properties": {
+                        "data": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/ReservationDto"
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "summary": "Lista reservas con filtros y paginación",
+        "tags": ["Reservations"]
+      }
+    },
+    "/api/v1/reservations/{id}": {
+      "get": {
+        "operationId": "ReservationsController_findOne",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReservationDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Detalle de una reserva",
+        "tags": ["Reservations"]
+      },
+      "patch": {
+        "description": "Reejecuta todas las reglas excluyéndose a sí misma, para que no colisione con su propio hueco actual.",
+        "operationId": "ReservationsController_reschedule",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateReservationDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReservationDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Reprograma una reserva",
+        "tags": ["Reservations"]
+      }
+    },
+    "/api/v1/reservations/{id}/cancellation": {
+      "post": {
+        "description": "Idempotente: cancelar una reserva ya cancelada devuelve 200. El hueco queda libre de inmediato, porque la constraint solo indexa CONFIRMED.",
+        "operationId": "ReservationsController_cancel",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CancelReservationDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReservationDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Cancela una reserva",
+        "tags": ["Reservations"]
+      }
+    },
+    "/api/v1/resources/{id}/availability": {
+      "get": {
+        "description": "Parte del horario operativo del recurso y le resta bloqueos y reservas confirmadas. Los huecos son semiabiertos `[inicio, fin)`, igual que las reservas: uno que termina a las 11:00 deja las 11:00 libres.\n\nUn recurso sin horario configurado está disponible las 24 horas.",
+        "operationId": "AvailabilityController_findSlots",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "required": true,
+            "in": "query",
+            "description": "Inicio del rango a consultar, UTC ISO 8601.",
+            "schema": {
+              "example": "2026-12-15T00:00:00Z",
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": true,
+            "in": "query",
+            "description": "Fin del rango. Máximo 60 días desde `from`.",
+            "schema": {
+              "example": "2026-12-16T00:00:00Z",
+              "type": "string"
+            }
+          },
+          {
+            "name": "minDurationMinutes",
+            "required": false,
+            "in": "query",
+            "description": "Descarta los huecos más cortos que esto.\n\nOfrecer un hueco de 15 minutos a quien necesita una hora solo produce un\nintento fallido.",
+            "schema": {
+              "minimum": 15,
+              "maximum": 480,
+              "default": 15,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AvailabilitySlotDto"
+                  }
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Rango inválido o superior a 60 días"
+          }
+        },
+        "summary": "Huecos libres de un recurso en un rango",
+        "tags": ["Availability"]
+      }
+    },
+    "/api/v1/users": {
+      "get": {
+        "description": "Incluye cuántas reservas futuras confirmadas tiene cada uno, para que el impacto de bloquear o degradar sea visible antes de hacerlo.",
+        "operationId": "UsersController_findAll",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "description": "Página, empezando en 1.",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "description": "Resultados por página.",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "type": "number"
+            }
+          },
+          {
+            "name": "sortOrder",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "default": "DESC",
+              "type": "string",
+              "enum": ["ASC", "DESC"]
+            }
+          },
+          {
+            "name": "sortBy",
+            "required": false,
+            "in": "query",
+            "description": "Sort field. Each controller restricts the allowed values, because\ninterpolating a client-supplied column name into ORDER BY is an injection\nvector that no parameter binding protects against.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "description": "Busca en nombre y correo.",
+            "schema": {
+              "example": "ana",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/PaginatedResponseDto"
+                    },
+                    {
+                      "properties": {
+                        "data": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/UserDto"
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "summary": "Lista los usuarios",
+        "tags": ["Users"]
+      },
+      "post": {
+        "description": "Alta por parte de un administrador, sin pasar por el registro público. La delega en el proveedor de identidad, que es quien sabe cifrar la contraseña. Un proveedor que no pueda crear cuentas responde 501.",
+        "operationId": "UsersController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateUserDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Ya existe una cuenta con ese correo"
+          }
+        },
+        "summary": "Crea una cuenta",
+        "tags": ["Users"]
+      }
+    },
+    "/api/v1/users/{id}": {
+      "patch": {
+        "description": "El correo es la credencial con la que esa persona inicia sesión, así que cambiarlo cambia cómo entra. El rol se cambia por su propia ruta, porque tiene su propia regla: nadie puede degradarse a sí mismo.",
+        "operationId": "UsersController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateUserDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "El correo ya está en uso por otra cuenta"
+          }
+        },
+        "summary": "Edita nombre y correo",
+        "tags": ["Users"]
+      }
+    },
+    "/api/v1/users/{id}/role": {
+      "patch": {
+        "description": "Un administrador no puede quitarse el rol a sí mismo: sería la forma más rápida de dejar el sistema sin nadie que pueda administrarlo.",
+        "operationId": "UsersController_updateRole",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateRoleDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Intento de auto-degradación"
+          }
+        },
+        "summary": "Cambia el rol de un usuario",
+        "tags": ["Users"]
+      }
+    },
+    "/api/v1/users/{id}/ban": {
+      "post": {
+        "description": "Surte efecto de inmediato: el adaptador rechaza al usuario bloqueado en cada petición, no solo al iniciar sesión, y además se revocan sus sesiones abiertas. Sin `days` el bloqueo es indefinido.",
+        "operationId": "UsersController_ban",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BanUserDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Intento de bloquearse a sí mismo"
+          }
+        },
+        "summary": "Bloquea a un usuario",
+        "tags": ["Users"]
+      },
+      "delete": {
+        "operationId": "UsersController_unban",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Desbloquea a un usuario",
+        "tags": ["Users"]
+      }
+    },
+    "/health": {
+      "get": {
+        "operationId": "HealthController_check",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "The Health Check is successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "example": "ok"
+                    },
+                    "info": {
+                      "type": "object",
+                      "example": {
+                        "database": {
+                          "status": "up"
+                        }
+                      },
+                      "additionalProperties": {
+                        "type": "object",
+                        "required": ["status"],
+                        "properties": {
+                          "status": {
+                            "type": "string"
+                          }
+                        },
+                        "additionalProperties": true
+                      },
+                      "nullable": true
+                    },
+                    "error": {
+                      "type": "object",
+                      "example": {},
+                      "additionalProperties": {
+                        "type": "object",
+                        "required": ["status"],
+                        "properties": {
+                          "status": {
+                            "type": "string"
+                          }
+                        },
+                        "additionalProperties": true
+                      },
+                      "nullable": true
+                    },
+                    "details": {
+                      "type": "object",
+                      "example": {
+                        "database": {
+                          "status": "up"
+                        }
+                      },
+                      "additionalProperties": {
+                        "type": "object",
+                        "required": ["status"],
+                        "properties": {
+                          "status": {
+                            "type": "string"
+                          }
+                        },
+                        "additionalProperties": true
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "The Health Check is not successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "example": "error"
+                    },
+                    "info": {
+                      "type": "object",
+                      "example": {
+                        "database": {
+                          "status": "up"
+                        }
+                      },
+                      "additionalProperties": {
+                        "type": "object",
+                        "required": ["status"],
+                        "properties": {
+                          "status": {
+                            "type": "string"
+                          }
+                        },
+                        "additionalProperties": true
+                      },
+                      "nullable": true
+                    },
+                    "error": {
+                      "type": "object",
+                      "example": {
+                        "redis": {
+                          "status": "down",
+                          "message": "Could not connect"
+                        }
+                      },
+                      "additionalProperties": {
+                        "type": "object",
+                        "required": ["status"],
+                        "properties": {
+                          "status": {
+                            "type": "string"
+                          }
+                        },
+                        "additionalProperties": true
+                      },
+                      "nullable": true
+                    },
+                    "details": {
+                      "type": "object",
+                      "example": {
+                        "database": {
+                          "status": "up"
+                        },
+                        "redis": {
+                          "status": "down",
+                          "message": "Could not connect"
+                        }
+                      },
+                      "additionalProperties": {
+                        "type": "object",
+                        "required": ["status"],
+                        "properties": {
+                          "status": {
+                            "type": "string"
+                          }
+                        },
+                        "additionalProperties": true
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Estado del servicio y de sus dependencias",
+        "tags": ["Health"]
+      }
+    }
+  },
+  "info": {
+    "title": "Shared Resource Booking API",
+    "description": "API de reservas de recursos compartidos.\n\n**Regla central:** dos reservas `CONFIRMED` nunca se solapan en el mismo recurso.\nLos intervalos son semiabiertos `[start, end)`, así que 10:00–11:00 y 11:00–12:00\nson contiguas y ambas válidas.\n\nLos errores siguen RFC 7807 (`application/problem+json`).",
+    "version": "0.3.1",
+    "contact": {}
+  },
+  "tags": [
+    {
+      "name": "Health",
+      "description": "Liveness and readiness"
+    },
+    {
+      "name": "Resource types",
+      "description": "Resource families and their attribute schema"
+    },
+    {
+      "name": "Resources",
+      "description": "Create, list, update and deactivate bookable resources"
+    },
+    {
+      "name": "Availability",
+      "description": "Free slots for a resource within a range"
+    },
+    {
+      "name": "Reservations",
+      "description": "Create, list, reschedule and cancel reservations"
+    }
+  ],
+  "servers": [
+    {
+      "url": "http://localhost:3000",
+      "description": "Local"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "cookie": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "better-auth.session_token",
+        "description": "Session cookie issued by POST /api/auth/sign-in/email"
+      }
+    },
+    "schemas": {
+      "PaginationMetaDto": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "number",
+            "example": 1
+          },
+          "limit": {
+            "type": "number",
+            "example": 20
+          },
+          "total": {
+            "type": "number",
+            "example": 137
+          },
+          "totalPages": {
+            "type": "number",
+            "example": 7
+          }
+        },
+        "required": ["page", "limit", "total", "totalPages"]
+      },
+      "PaginatedResponseDto": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "description": "Declared explicitly as an untyped array.\n\nSwagger cannot resolve `T` at runtime, and letting the CLI plugin infer\nit makes the schema self-referential -- the app fails to boot with\n\"circular dependency detected (property key: data)\". The real item type\nis composed by ApiPaginatedResponse() below, via allOf.",
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "meta": {
+            "$ref": "#/components/schemas/PaginationMetaDto"
+          }
+        },
+        "required": ["data", "meta"]
+      },
+      "ResourceTypeDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string",
+            "example": "meeting-room"
+          },
+          "name": {
+            "type": "string",
+            "example": "Sala de reuniones"
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "isActive": {
+            "type": "boolean"
+          }
+        },
+        "required": ["id", "code", "name", "isActive"]
+      },
+      "ResourceDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string",
+            "example": "aurora"
+          },
+          "name": {
+            "type": "string",
+            "example": "Sala Aurora"
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "capacity": {
+            "type": "number",
+            "nullable": true,
+            "example": 12
+          },
+          "location": {
+            "type": "string",
+            "nullable": true,
+            "example": "Planta 2"
+          },
+          "timeZone": {
+            "type": "string",
+            "description": "IANA zone. The client formats times in this zone, not the browser's.",
+            "example": "Europe/Madrid"
+          },
+          "isActive": {
+            "type": "boolean"
+          },
+          "resourceType": {
+            "$ref": "#/components/schemas/ResourceTypeDto"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": ["id", "code", "name", "timeZone", "isActive", "createdAt"]
+      },
+      "CreateResourceDto": {
+        "type": "object",
+        "properties": {
+          "description": {
+            "type": "string"
+          },
+          "capacity": {
+            "type": "number",
+            "description": "Aforo máximo. Se contrasta con los asistentes de cada reserva.",
+            "minimum": 1,
+            "example": 12
+          },
+          "location": {
+            "type": "string",
+            "maxLength": 160,
+            "example": "Planta 2"
+          },
+          "timeZone": {
+            "type": "string",
+            "description": "Zona IANA, por ejemplo Europe/Madrid.\n\nEl horario operativo se interpreta en esta zona; los instantes se guardan\nsiempre en UTC.",
+            "maxLength": 64,
+            "example": "Europe/Madrid",
+            "default": "UTC"
+          },
+          "resourceTypeId": {
+            "type": "string",
+            "description": "Tipo al que pertenece. Determina qué atributos son válidos.",
+            "format": "uuid"
+          },
+          "code": {
+            "type": "string",
+            "description": "Código único y estable. Minúsculas, números y guiones.",
+            "maxLength": 60,
+            "pattern": "^[a-z0-9-]+$"
+          },
+          "name": {
+            "type": "string",
+            "description": "Nombre visible.",
+            "maxLength": 160
+          }
+        },
+        "required": ["resourceTypeId", "code", "name"]
+      },
+      "UpdateResourceDto": {
+        "type": "object",
+        "properties": {
+          "description": {
+            "type": "string"
+          },
+          "capacity": {
+            "type": "number",
+            "description": "Aforo máximo. Se contrasta con los asistentes de cada reserva.",
+            "minimum": 1,
+            "example": 12
+          },
+          "location": {
+            "type": "string",
+            "maxLength": 160,
+            "example": "Planta 2"
+          },
+          "timeZone": {
+            "type": "string",
+            "description": "Zona IANA, por ejemplo Europe/Madrid.\n\nEl horario operativo se interpreta en esta zona; los instantes se guardan\nsiempre en UTC.",
+            "maxLength": 64,
+            "example": "Europe/Madrid",
+            "default": "UTC"
+          },
+          "name": {
+            "type": "string",
+            "description": "Nombre visible.",
+            "maxLength": 160
+          }
+        }
+      },
+      "CreateResourceTypeDto": {
+        "type": "object",
+        "properties": {
+          "description": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string",
+            "description": "Código único y estable. Minúsculas, números y guiones.",
+            "maxLength": 60,
+            "pattern": "^[a-z0-9-]+$"
+          },
+          "name": {
+            "type": "string",
+            "description": "Nombre visible del tipo.",
+            "maxLength": 120
+          }
+        },
+        "required": ["code", "name"]
+      },
+      "CreateReservationDto": {
+        "type": "object",
+        "properties": {
+          "startAt": {
+            "type": "string",
+            "description": "Inicio en UTC, ISO 8601. **Inclusivo.**\n\nDebe caer en un múltiplo de 15 minutos.",
+            "example": "2026-09-15T10:00:00Z"
+          },
+          "endAt": {
+            "type": "string",
+            "description": "Fin en UTC, ISO 8601. **Exclusivo.**\n\nUna reserva que termina a las 11:00 no colisiona con otra que empieza a\nlas 11:00: los intervalos son semiabiertos `[inicio, fin)`.",
+            "example": "2026-09-15T11:00:00Z"
+          },
+          "attendees": {
+            "type": "number",
+            "description": "Asistentes previstos. Se contrasta con el aforo del recurso.",
+            "minimum": 1,
+            "example": 8
+          },
+          "notes": {
+            "type": "string"
+          },
+          "resourceId": {
+            "type": "string",
+            "description": "Recurso a reservar.",
+            "format": "uuid"
+          },
+          "title": {
+            "type": "string",
+            "description": "Título visible en la agenda.",
+            "maxLength": 160
+          }
+        },
+        "required": ["startAt", "endAt", "resourceId", "title"]
+      },
+      "ReservationDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "startAt": {
+            "format": "date-time",
+            "type": "string",
+            "description": "Inicio en UTC. Inclusivo."
+          },
+          "endAt": {
+            "format": "date-time",
+            "type": "string",
+            "description": "Fin en UTC. **Exclusivo.**"
+          },
+          "status": {
+            "enum": ["CONFIRMED", "CANCELLED", "COMPLETED"],
+            "type": "string"
+          },
+          "attendees": {
+            "type": "number",
+            "nullable": true
+          },
+          "notes": {
+            "type": "string",
+            "nullable": true
+          },
+          "userId": {
+            "type": "string"
+          },
+          "resourceId": {
+            "type": "string"
+          },
+          "resource": {
+            "$ref": "#/components/schemas/ResourceDto"
+          },
+          "cancelledAt": {
+            "format": "date-time",
+            "type": "string",
+            "nullable": true
+          },
+          "cancellationReason": {
+            "type": "string",
+            "nullable": true
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "startAt",
+          "endAt",
+          "status",
+          "userId",
+          "resourceId",
+          "createdAt"
+        ]
+      },
+      "CancelReservationDto": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string",
+            "description": "Motivo de la cancelación. Queda registrado.",
+            "maxLength": 300,
+            "example": "Se pospone la reunión"
+          }
+        }
+      },
+      "AvailabilitySlotDto": {
+        "type": "object",
+        "properties": {
+          "startAt": {
+            "format": "date-time",
+            "type": "string",
+            "description": "Inicio del hueco, UTC. Inclusivo."
+          },
+          "endAt": {
+            "format": "date-time",
+            "type": "string",
+            "description": "Fin del hueco, UTC. **Exclusivo.**"
+          },
+          "durationMinutes": {
+            "type": "number",
+            "example": 60
+          },
+          "timeZone": {
+            "type": "string",
+            "description": "Zona en la que el cliente debe pintar el hueco.\n\nVa en cada slot para que el cliente no tenga que cruzarlo con el recurso\nen una segunda petición solo para saber cómo mostrarlo.",
+            "example": "Europe/Madrid"
+          }
+        },
+        "required": ["startAt", "endAt", "durationMinutes", "timeZone"]
+      },
+      "UserDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "role": {
+            "enum": ["admin", "user"],
+            "type": "string"
+          },
+          "emailVerified": {
+            "type": "boolean"
+          },
+          "banned": {
+            "type": "boolean"
+          },
+          "activeReservations": {
+            "type": "number",
+            "description": "Future confirmed reservations. Shown so an admin sees the impact of a ban.",
+            "example": 3
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "email",
+          "role",
+          "emailVerified",
+          "banned",
+          "activeReservations",
+          "createdAt"
+        ]
+      },
+      "CreateUserDto": {
+        "type": "object",
+        "properties": {
+          "password": {
+            "type": "string",
+            "description": "Mínimo 10 caracteres, igual que en el registro público.",
+            "minLength": 10
+          },
+          "role": {
+            "description": "Por defecto `user`.",
+            "enum": ["admin", "user"],
+            "type": "string",
+            "default": "user"
+          },
+          "email": {
+            "type": "string",
+            "description": "Correo, único en el sistema.",
+            "format": "email"
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 120
+          }
+        },
+        "required": ["password", "email", "name"]
+      },
+      "UpdateUserDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Nombre visible.",
+            "maxLength": 120
+          },
+          "email": {
+            "type": "string",
+            "description": "Correo. Debe seguir siendo único.\n\nCambiarlo cambia la credencial con la que esa persona inicia sesión, así\nque la interfaz lo advierte antes de guardar.",
+            "format": "email"
+          }
+        }
+      },
+      "UpdateRoleDto": {
+        "type": "object",
+        "properties": {
+          "role": {
+            "description": "Nuevo rol. Solo `admin` o `user`.",
+            "enum": ["admin", "user"],
+            "type": "string"
+          }
+        },
+        "required": ["role"]
+      },
+      "BanUserDto": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string",
+            "description": "Motivo del bloqueo. Queda registrado.",
+            "maxLength": 300,
+            "example": "Uso indebido de las salas"
+          },
+          "days": {
+            "type": "number",
+            "description": "Duración en días. Sin valor, el bloqueo es indefinido.\n\nBetter Auth levanta el bloqueo por sí solo al vencer, así que no hace\nfalta ningún proceso programado que lo revise.",
+            "minimum": 1,
+            "example": 30
+          }
+        }
+      }
+    }
+  }
+}

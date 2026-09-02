@@ -54,6 +54,11 @@ services:
       - ./tsconfig.json:/app/tsconfig.json:ro
       - ./tsconfig.build.json:/app/tsconfig.build.json:ro
       - ./nest-cli.json:/app/nest-cli.json:ro
+      # package.json too, for the same reason: it holds the npm scripts, so
+      # renaming one on the host otherwise has no effect until the image is
+      # rebuilt -- and the symptom is the container running the OLD command,
+      # which is far more confusing than a missing file.
+      - ./package.json:/app/package.json:ro
       # Anonymous volume: the container's node_modules is not shadowed by the
       # host's, which matters because they are built for different platforms.
       - /app/node_modules
