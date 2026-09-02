@@ -2243,13 +2243,6 @@ explícita.
   consultar huecos → reservar → **intentar solapar y ver el 409** → cancelar → comprobar
   que el hueco volvió.
 
-### Antes de enviar
-
-Clona tus propios repositorios en una carpeta limpia y sigue tu README al pie de la letra,
-sin usar nada de tu entorno. Si `docker compose up` más un comando no dejan la API
-respondiendo con datos de ejemplo, arréglalo: es lo primero que hará quien te evalúe, y es
-la única parte del trabajo que se juzga antes de leer una línea de tu código.
-
 ---
 
 _Última verificación de versiones y vulnerabilidades: 2026-09-01._
