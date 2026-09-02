@@ -1,6 +1,6 @@
 {
   "name": "reservations-api",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Shared resource booking API — NestJS + PostgreSQL",
   "license": "UNLICENSED",
   "private": true,

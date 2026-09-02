@@ -11,6 +11,22 @@ y el versionado sigue [Semantic Versioning](https://semver.org/lang/es/).
 >
 > Cortar una versión: `npm run release` (o el workflow _Release_ en GitHub).
 
+## [0.3.0](///compare/v0.2.0...v0.3.0) (2026-09-02)
+
+### Funcionalidades
+
+- **database:** add the production migration runner and demo seeds 9c2f749
+- **tooling:** add a Makefile as the single entry point 06e46e4
+
+### Correcciones
+
+- **tooling:** make both invariant checks runnable with one word d73edab
+
+### Documentación
+
+- add the README and document the Makefile in the plan 8f28ea1
+- correct the testing section, the e2e suite is not written yet af48b73
+
 ## [0.2.0](///compare/v0.1.0...v0.2.0) (2026-09-01)
 
 ### Funcionalidades
