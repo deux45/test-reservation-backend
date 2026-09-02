@@ -278,14 +278,18 @@ el intento falló.
 ## Tests
 
 ```bash
-make test       # 57 unitarios
-make test-e2e   # end-to-end con Testcontainers
-make check      # tipos + lint + tests, lo mismo que CI
+make test    # 57 unitarios
+make check   # tipos + lint + tests, lo mismo que CI
 ```
 
-Los e2e levantan su propio PostgreSQL con Testcontainers en lugar de reutilizar
-el de desarrollo: un test que depende del estado que le dejó el anterior es un
+Testcontainers está configurado y `make test-e2e` existe, pero **la suite
+end-to-end aún no está escrita**: hoy ese comando no ejecuta ningún test. El
+diseño es que levante su propio PostgreSQL en lugar de reutilizar el de
+desarrollo, porque un test que depende del estado que le dejó el anterior es un
 test que falla los martes.
+
+Mientras tanto, la garantía central sí está verificada de dos formas
+independientes: `make verify-overlap` y `make verify-concurrency`.
 
 Lo que se prueba y por qué:
 
