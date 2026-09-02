@@ -11,6 +11,16 @@ and the versioning follows [Semantic Versioning](https://semver.org/).
 >
 > Cutting a release: `npm run release` (or the _Release_ workflow on GitHub).
 
+## [0.3.4](///compare/v0.3.3...v0.3.4) (2026-09-02)
+
+### Documentation
+
+- drop the references to an unrelated internal repository a13d012
+- remove section 7.1 on working with AI c800562
+- remove the F16 row from the phase table c6566eb
+- remove the scope-cutting note from the phase plan 406d331
+- stop reproducing the brief's own wording in the plan 3c40507
+
 ## [0.3.3](///compare/v0.3.2...v0.3.3) (2026-09-02)
 
 ### Documentation
