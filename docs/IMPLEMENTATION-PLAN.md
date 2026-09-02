@@ -27,8 +27,7 @@ Backend: NestJS + PostgreSQL + TypeORM · Frontend: Next.js + React + MUI
 - [5. Entrega: Docker, versionado y CI/CD](#5-entrega-docker-versionado-y-cicd)
 - [6. Estrategia de pruebas](#6-estrategia-de-pruebas)
 - [7. Plan por fases](#7-plan-por-fases)
-- [8. Documento reflexivo](#8-documento-reflexivo)
-- [9. Checklist de entrega](#9-checklist-de-entrega)
+- [8. Checklist de entrega](#8-checklist-de-entrega)
 
 ---
 
@@ -2219,30 +2218,7 @@ explícita.
 
 ---
 
-## 8. Documento reflexivo
-
-Seis secciones, dos páginas y media, en prosa. La mayoría de candidatos describe lo que
-hizo; la versión que destaca explica **lo que descartó**.
-
-| Sección                                            | Qué contar                                                                                                                                                                                                                                                                                                                          |
-| -------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **1. El problema tal como lo entendí**             | Que no va de un CRUD sino de **una invariante bajo concurrencia**. Por qué el dominio genérico multi-tipo no era complejidad gratis. El alcance que dejaste fuera y por qué.                                                                                                                                                        |
-| **2. La decisión central**                         | Las tres capas y el matiz que las justifica: **la constraint garantiza, el lock explica**. Por qué `'[)'`. Por qué descartaste `SERIALIZABLE`.                                                                                                                                                                                      |
-| **2b. Dónde pusiste las abstracciones**            | Que descartaste `domain/application/infrastructure` por sobre-ingeniería a esta escala, y que aun así conservaste **dos** puertos: las reglas y el proveedor de identidad (§3.10). Saber dónde _no_ abstraer se lee mejor que abstraerlo todo. Cuenta también que descartaste el paquete comunitario de auth por 40 líneas propias. |
-| **3. Cómo lo probé**                               | Los siete casos frontera y por qué _a_ y _b_ son los interesantes. El test de las 25 peticiones y qué habría fallado sin el lock. Por qué Testcontainers y no un doble en memoria.                                                                                                                                                  |
-| **4. Dependencias y cadena de suministro**         | El cooldown de 7 días, y la consecuencia asumida: **20 de 55 paquetes fijados a una versión que no es la última, NestJS 11 en lugar del 12 publicado hace 4 días**. `class-transformer` sin mantenimiento desde 2021 y cómo lo mitigaste. Esta sección casi nadie la escribe.                                                       |
-| **5. Trabajar con IA**                             | Concreto y honesto, con ejemplos reales. Dónde aceleró y **dónde te dio algo plausible pero incorrecto** —casi seguro, una comprobación de solape solo en el servicio, o la frontera `end == start` mal tratada—, cómo lo detectaste y qué hiciste.                                                                                 |
-| **6. Lo que falta y qué haría con una semana más** | Sin excusas: paginación por offset en lugar de cursor, sin auditoría de cambios, sin rate limiting, cobertura de front deliberadamente ligera. Después, priorizado: reservas recurrentes, lista de espera sobre huecos liberados, métricas de ocupación.                                                                            |
-
-> **El detalle que casi nadie incluye.** Una sección corta titulada _"Un error que cometí"_.
-> Elige uno real —el más probable es haber tratado la frontera `end == start` como
-> conflicto hasta que el test parametrizado lo delató—, cuenta cómo lo encontraste y qué
-> cambiaste. Un candidato que sabe depurar su propio razonamiento vale más que uno cuyo
-> código simplemente funcionó.
-
----
-
-## 9. Checklist de entrega
+## 8. Checklist de entrega
 
 | Requisito del enunciado                | Dónde queda resuelto                                                                  |
 | -------------------------------------- | ------------------------------------------------------------------------------------- |
@@ -2253,7 +2229,6 @@ hizo; la versión que destaca explica **lo que descartó**.
 | Listar con filtros y paginación        | §3.7 — recurso, usuario, rango, estado + `page`/`limit`.                              |
 | CRUD de recursos con baja              | §3.7 — baja lógica que protege el histórico.                                          |
 | Autenticación _(opcional, suma)_       | §3.10 — Better Auth tras un adaptador, con sesiones y roles, compartido con el front. |
-| Documento reflexivo                    | §8 — seis secciones, con la de IA sustentada en notas reales.                         |
 
 ### Lo que se entrega
 
@@ -2264,7 +2239,8 @@ hizo; la versión que destaca explica **lo que descartó**.
   cómo correr cada nivel de pruebas, la tabla de los siete casos frontera.
 - Captura o GIF de la suite de concurrencia en verde. Es la prueba más convincente del
   repositorio y no debería haber que buscarla.
-- `REFLECTION.md` en el repositorio del backend, enlazado desde el README.
+- El documento reflexivo, **como fichero aparte en PDF o Word**, no dentro del README ni
+  del repositorio: así es como se pide.
 - Colección de Bruno o Postman con la secuencia completa: login → crear recurso →
   consultar huecos → reservar → **intentar solapar y ver el 409** → cancelar → comprobar
   que el hueco volvió.
