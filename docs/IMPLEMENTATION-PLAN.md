@@ -2239,8 +2239,6 @@ explícita.
   cómo correr cada nivel de pruebas, la tabla de los siete casos frontera.
 - Captura o GIF de la suite de concurrencia en verde. Es la prueba más convincente del
   repositorio y no debería haber que buscarla.
-- El documento reflexivo, **como fichero aparte en PDF o Word**, no dentro del README ni
-  del repositorio: así es como se pide.
 - Colección de Bruno o Postman con la secuencia completa: login → crear recurso →
   consultar huecos → reservar → **intentar solapar y ver el 409** → cancelar → comprobar
   que el hueco volvió.
