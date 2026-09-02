@@ -11,6 +11,20 @@ and the versioning follows [Semantic Versioning](https://semver.org/).
 >
 > Cutting a release: `npm run release` (or the _Release_ workflow on GitHub).
 
+## [0.3.2](///compare/v0.3.1...v0.3.2) (2026-09-02)
+
+### Features
+
+- **tooling:** generate openapi.json, which nothing could produce before 9410773
+
+### Bug fixes
+
+- **docs:** Swagger is served at /api/docs, not /docs e377ea9
+
+### Documentation
+
+- **config:** write the whole OpenAPI document in English 7b67a7f
+
 ## [0.3.1](///compare/v0.3.0...v0.3.1) (2026-09-02)
 
 ### Documentation
