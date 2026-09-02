@@ -10,13 +10,13 @@ export function buildOpenApiDocument(app: INestApplication): OpenAPIObject {
     .setTitle('Shared Resource Booking API')
     .setDescription(
       [
-        'API de reservas de recursos compartidos.',
+        'Booking API for shared resources.',
         '',
-        '**Regla central:** dos reservas `CONFIRMED` nunca se solapan en el mismo recurso.',
-        'Los intervalos son semiabiertos `[start, end)`, así que 10:00–11:00 y 11:00–12:00',
-        'son contiguas y ambas válidas.',
+        '**Central rule:** two `CONFIRMED` reservations never overlap on the same resource.',
+        'Intervals are half-open `[start, end)`, so 10:00–11:00 and 11:00–12:00 are',
+        'contiguous and both valid.',
         '',
-        'Los errores siguen RFC 7807 (`application/problem+json`).',
+        'Errors follow RFC 7807 (`application/problem+json`).',
       ].join('\n'),
     )
     .setVersion(process.env.npm_package_version ?? '0.0.0')
@@ -32,7 +32,7 @@ export function buildOpenApiDocument(app: INestApplication): OpenAPIObject {
     })
 
     .addTag('Health', 'Liveness and readiness')
-    .addTag('Resource types', 'Resource families and their attribute schema')
+    .addTag('Resource types', 'Families of bookable resources')
     .addTag('Resources', 'Create, list, update and deactivate bookable resources')
     .addTag('Availability', 'Free slots for a resource within a range')
     .addTag('Reservations', 'Create, list, reschedule and cancel reservations')

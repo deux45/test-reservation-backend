@@ -12,11 +12,11 @@ import {
 import { ROLES, type Role } from './user.dto';
 
 export class CreateUserDto {
-  /** Correo, único en el sistema. */
+  /** Email, unique across the system. */
   @IsEmail()
   email: string;
 
-  /** Mínimo 10 caracteres, igual que en el registro público. */
+  /** At least 10 characters, the same as public sign-up. */
   @ApiProperty({ minLength: 10 })
   @IsString()
   @MinLength(10)
@@ -26,7 +26,7 @@ export class CreateUserDto {
   @MaxLength(120)
   name: string;
 
-  /** Por defecto `user`. */
+  /** Defaults to `user`. */
   @ApiPropertyOptional({ enum: ROLES, default: 'user' })
   @IsOptional()
   @IsIn(ROLES)
@@ -34,7 +34,7 @@ export class CreateUserDto {
 }
 
 export class UpdateUserDto {
-  /** Nombre visible. */
+  /** Display name. */
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
@@ -42,10 +42,10 @@ export class UpdateUserDto {
   name?: string;
 
   /**
-   * Correo. Debe seguir siendo único.
+   * Email. It must remain unique.
    *
-   * Cambiarlo cambia la credencial con la que esa persona inicia sesión, así
-   * que la interfaz lo advierte antes de guardar.
+   * Changing it changes the credential this person signs in with, which is
+   * why the interface warns before saving.
    */
   @ApiPropertyOptional()
   @IsOptional()
@@ -54,18 +54,18 @@ export class UpdateUserDto {
 }
 
 export class BanUserDto {
-  /** Motivo del bloqueo. Queda registrado. */
-  @ApiPropertyOptional({ example: 'Uso indebido de las salas' })
+  /** Reason for the ban. It is recorded. */
+  @ApiPropertyOptional({ example: 'Misuse of the meeting rooms' })
   @IsOptional()
   @IsString()
   @MaxLength(300)
   reason?: string;
 
   /**
-   * Duración en días. Sin valor, el bloqueo es indefinido.
+   * Duration in days. With no value the ban is indefinite.
    *
-   * Better Auth levanta el bloqueo por sí solo al vencer, así que no hace
-   * falta ningún proceso programado que lo revise.
+   * Better Auth lifts the ban itself once it expires, so no scheduled job is
+   * needed to check for it.
    */
   @ApiPropertyOptional({ example: 30 })
   @IsOptional()

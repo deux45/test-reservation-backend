@@ -4,21 +4,21 @@ import { IsInt, IsISO8601, IsOptional, Max, Min } from 'class-validator';
 import { type Interval } from '../utils/intervals.util';
 
 export class AvailabilityQueryDto {
-  /** Inicio del rango a consultar, UTC ISO 8601. */
+  /** Start of the range to query, UTC ISO 8601. */
   @ApiProperty({ example: '2026-12-15T00:00:00Z' })
   @IsISO8601()
   from: string;
 
-  /** Fin del rango. Máximo 60 días desde `from`. */
+  /** End of the range. At most 60 days from `from`. */
   @ApiProperty({ example: '2026-12-16T00:00:00Z' })
   @IsISO8601()
   to: string;
 
   /**
-   * Descarta los huecos más cortos que esto.
+   * Discards slots shorter than this.
    *
-   * Ofrecer un hueco de 15 minutos a quien necesita una hora solo produce un
-   * intento fallido.
+   * Offering a 15-minute slot to someone who needs an hour only produces a
+   * failed attempt.
    */
   @ApiPropertyOptional({ minimum: 15, maximum: 480, default: 15 })
   @IsOptional()
@@ -30,19 +30,19 @@ export class AvailabilityQueryDto {
 }
 
 export class AvailabilitySlotDto {
-  /** Inicio del hueco, UTC. Inclusivo. */
+  /** Start of the slot, UTC. Inclusive. */
   @ApiProperty() startAt: Date;
 
-  /** Fin del hueco, UTC. **Exclusivo.** */
+  /** End of the slot, UTC. **Exclusive.** */
   @ApiProperty() endAt: Date;
 
   @ApiProperty({ example: 60 }) durationMinutes: number;
 
   /**
-   * Zona en la que el cliente debe pintar el hueco.
+   * The zone the client should render the slot in.
    *
-   * Va en cada slot para que el cliente no tenga que cruzarlo con el recurso
-   * en una segunda petición solo para saber cómo mostrarlo.
+   * Carried on every slot so the client does not have to cross-reference the
+   * resource in a second request just to know how to display it.
    */
   @ApiProperty({ example: 'Europe/Madrid' }) timeZone: string;
 

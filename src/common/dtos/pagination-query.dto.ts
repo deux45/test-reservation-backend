@@ -4,7 +4,7 @@ import { IsIn, IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
 
 /** Query parameters shared by every paginated listing. */
 export class PaginationQueryDto {
-  /** Página, empezando en 1. */
+  /** Page number, starting at 1. */
   @ApiPropertyOptional({ minimum: 1, default: 1 })
   @IsOptional()
   @Type(() => Number)
@@ -12,7 +12,7 @@ export class PaginationQueryDto {
   @Min(1)
   page: number = 1;
 
-  /** Resultados por página. */
+  /** Results per page. */
   @ApiPropertyOptional({ minimum: 1, maximum: 100, default: 20 })
   @IsOptional()
   @Type(() => Number)

@@ -2,7 +2,7 @@ import { ApiPropertyOptional } from '@nestjs/swagger';
 import { IsOptional, IsString, Matches, MaxLength } from 'class-validator';
 
 export class CreateResourceTypeDto {
-  /** Código único y estable. Minúsculas, números y guiones. */
+  /** Unique, stable code. Lowercase letters, digits and hyphens. */
   @IsString()
   @MaxLength(60)
   @Matches(/^[a-z0-9-]+$/, {
@@ -10,7 +10,7 @@ export class CreateResourceTypeDto {
   })
   code: string;
 
-  /** Nombre visible del tipo. */
+  /** Display name of the type. */
   @IsString()
   @MaxLength(120)
   name: string;

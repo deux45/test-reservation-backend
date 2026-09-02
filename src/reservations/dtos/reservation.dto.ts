@@ -5,8 +5,8 @@ import { type Reservation } from '../entities/reservation.entity';
 import { ReservationStatus } from '../enums/reservation-status.enum';
 
 export class CancelReservationDto {
-  /** Motivo de la cancelación. Queda registrado. */
-  @ApiPropertyOptional({ example: 'Se pospone la reunión' })
+  /** Reason for the cancellation. It is recorded. */
+  @ApiPropertyOptional({ example: 'The meeting is postponed' })
   @IsOptional()
   @IsString()
   @MaxLength(300)
@@ -17,10 +17,10 @@ export class ReservationDto {
   @ApiProperty() id: string;
   @ApiProperty() title: string;
 
-  /** Inicio en UTC. Inclusivo. */
+  /** Start in UTC. Inclusive. */
   @ApiProperty() startAt: Date;
 
-  /** Fin en UTC. **Exclusivo.** */
+  /** End in UTC. **Exclusive.** */
   @ApiProperty() endAt: Date;
 
   @ApiProperty({ enum: ReservationStatus }) status: ReservationStatus;

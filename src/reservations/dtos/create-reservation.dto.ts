@@ -2,35 +2,35 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsInt, IsISO8601, IsOptional, IsString, IsUUID, MaxLength, Min } from 'class-validator';
 
 export class CreateReservationDto {
-  /** Recurso a reservar. */
+  /** The resource to book. */
   @IsUUID()
   resourceId: string;
 
-  /** Título visible en la agenda. */
+  /** Title shown in the schedule. */
   @IsString()
   @MaxLength(160)
   title: string;
 
   /**
-   * Inicio en UTC, ISO 8601. **Inclusivo.**
+   * Start in UTC, ISO 8601. **Inclusive.**
    *
-   * Debe caer en un múltiplo de 15 minutos.
+   * Must fall on a multiple of 15 minutes.
    */
   @ApiProperty({ example: '2026-09-15T10:00:00Z' })
   @IsISO8601()
   startAt: string;
 
   /**
-   * Fin en UTC, ISO 8601. **Exclusivo.**
+   * End in UTC, ISO 8601. **Exclusive.**
    *
-   * Una reserva que termina a las 11:00 no colisiona con otra que empieza a
-   * las 11:00: los intervalos son semiabiertos `[inicio, fin)`.
+   * A reservation ending at 11:00 does not collide with one starting at
+   * 11:00: intervals are half-open `[start, end)`.
    */
   @ApiProperty({ example: '2026-09-15T11:00:00Z' })
   @IsISO8601()
   endAt: string;
 
-  /** Asistentes previstos. Se contrasta con el aforo del recurso. */
+  /** Expected attendees. Checked against the resource's capacity. */
   @ApiPropertyOptional({ example: 8 })
   @IsOptional()
   @IsInt()

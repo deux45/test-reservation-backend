@@ -4,19 +4,19 @@ import { IsBoolean, IsInt, IsOptional, IsString, IsUUID, Min } from 'class-valid
 import { PaginationQueryDto } from '../../common/dtos/pagination-query.dto';
 
 export class FilterResourcesDto extends PaginationQueryDto {
-  /** Solo recursos de este tipo. */
+  /** Only resources of this type. */
   @ApiPropertyOptional()
   @IsOptional()
   @IsUUID()
   typeId?: string;
 
-  /** Busca en nombre y código. */
+  /** Searches name and code. */
   @ApiPropertyOptional({ example: 'aurora' })
   @IsOptional()
   @IsString()
   q?: string;
 
-  /** Aforo mínimo. */
+  /** Minimum capacity. */
   @ApiPropertyOptional({ example: 8 })
   @IsOptional()
   @Type(() => Number)
@@ -29,7 +29,7 @@ export class FilterResourcesDto extends PaginationQueryDto {
   @IsString()
   location?: string;
 
-  /** Por defecto muestra activos e inactivos. */
+  /** By default both active and inactive are shown. */
   @ApiPropertyOptional({ example: true })
   @IsOptional()
   // A query string carries "true", not true. Without this the value arrives

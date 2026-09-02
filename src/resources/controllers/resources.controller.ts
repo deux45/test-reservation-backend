@@ -36,16 +36,16 @@ export class ResourcesController {
   constructor(private readonly service: ResourceService) {}
 
   @Get()
-  @ApiOperation({ summary: 'Lista recursos con filtros y paginación' })
+  @ApiOperation({ summary: 'List resources with filters and pagination' })
   @ApiPaginatedResponse(ResourceDto)
   findAll(@Query() filters: FilterResourcesDto): Promise<PaginatedResult<ResourceDto>> {
     return this.service.findAllPaginated(filters);
   }
 
   @Get(':id')
-  @ApiOperation({ summary: 'Detalle de un recurso, con su tipo y horario semanal' })
+  @ApiOperation({ summary: 'Get one resource, with its type and weekly schedule' })
   @ApiOkResponse({ type: ResourceDto })
-  @ApiNotFoundResponse({ description: 'El recurso no existe' })
+  @ApiNotFoundResponse({ description: 'The resource does not exist' })
   findOne(@Param('id', ParseUUIDPipe) id: string): Promise<ResourceDto> {
     return this.service.findById(id);
   }
@@ -53,13 +53,13 @@ export class ResourcesController {
   @Post()
   @Roles('admin')
   @ApiOperation({
-    summary: 'Crea un recurso',
-    description: 'Alta de un recurso reservable dentro de un tipo existente.',
+    summary: 'Create a resource',
+    description: 'Registers a bookable resource under an existing type.',
   })
   @ApiCreatedResponse({ type: ResourceDto })
-  @ApiConflictResponse({ description: 'Ya existe un recurso con ese código' })
+  @ApiConflictResponse({ description: 'A resource with that code already exists' })
   @ApiUnprocessableEntityResponse({
-    description: 'La zona horaria no es válida',
+    description: 'The time zone is not valid',
   })
   create(@Body() dto: CreateResourceDto): Promise<ResourceDto> {
     return this.service.create(dto);
@@ -68,8 +68,8 @@ export class ResourcesController {
   @Patch(':id')
   @Roles('admin')
   @ApiOperation({
-    summary: 'Actualiza un recurso',
-    description: 'code y resourceTypeId no son editables: ambos identifican al recurso.',
+    summary: 'Update a resource',
+    description: 'code and resourceTypeId are not editable: both identify the resource.',
   })
   @ApiOkResponse({ type: ResourceDto })
   update(
@@ -83,10 +83,10 @@ export class ResourcesController {
   @Roles('admin')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({
-    summary: 'Da de baja un recurso',
+    summary: 'Deactivate a resource',
     description:
-      'Baja lógica. El recurso deja de poder reservarse pero su histórico de ' +
-      'reservas se conserva intacto, que es la razón de no borrarlo.',
+      'A soft delete. The resource can no longer be booked, but its reservation ' +
+      'history is kept intact -- which is the reason it is not deleted.',
   })
   @ApiNoContentResponse()
   deactivate(@Param('id', ParseUUIDPipe) id: string): Promise<void> {
@@ -95,7 +95,7 @@ export class ResourcesController {
 
   @Post(':id/activation')
   @Roles('admin')
-  @ApiOperation({ summary: 'Reactiva un recurso dado de baja' })
+  @ApiOperation({ summary: 'Reactivate a deactivated resource' })
   @ApiOkResponse({ type: ResourceDto })
   activate(@Param('id', ParseUUIDPipe) id: string): Promise<ResourceDto> {
     return this.service.activate(id);

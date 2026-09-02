@@ -36,14 +36,14 @@ export class UserDto {
 }
 
 export class UpdateRoleDto {
-  /** Nuevo rol. Solo `admin` o `user`. */
+  /** The new role. Only `admin` or `user`. */
   @ApiProperty({ enum: ROLES })
   @IsIn(ROLES)
   role: Role;
 }
 
 export class FilterUsersDto extends PaginationQueryDto {
-  /** Busca en nombre y correo. */
+  /** Searches name and email. */
   @ApiPropertyOptional({ example: 'ana' })
   // Without these the field has no validator, and forbidNonWhitelisted
   // rejects the whole request with "property q should not exist" -- the pipe

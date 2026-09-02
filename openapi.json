@@ -17,7 +17,7 @@
             }
           }
         },
-        "summary": "Usuario de la sesión actual",
+        "summary": "The current session user",
         "tags": ["Auth"]
       }
     },
@@ -29,7 +29,7 @@
             "name": "page",
             "required": false,
             "in": "query",
-            "description": "Página, empezando en 1.",
+            "description": "Page number, starting at 1.",
             "schema": {
               "minimum": 1,
               "default": 1,
@@ -40,7 +40,7 @@
             "name": "limit",
             "required": false,
             "in": "query",
-            "description": "Resultados por página.",
+            "description": "Results per page.",
             "schema": {
               "minimum": 1,
               "maximum": 100,
@@ -71,7 +71,7 @@
             "name": "typeId",
             "required": false,
             "in": "query",
-            "description": "Solo recursos de este tipo.",
+            "description": "Only resources of this type.",
             "schema": {
               "format": "uuid",
               "type": "string"
@@ -81,7 +81,7 @@
             "name": "q",
             "required": false,
             "in": "query",
-            "description": "Busca en nombre y código.",
+            "description": "Searches name and code.",
             "schema": {
               "example": "aurora",
               "type": "string"
@@ -91,7 +91,7 @@
             "name": "minCapacity",
             "required": false,
             "in": "query",
-            "description": "Aforo mínimo.",
+            "description": "Minimum capacity.",
             "schema": {
               "minimum": 1,
               "example": 8,
@@ -111,7 +111,7 @@
             "name": "isActive",
             "required": false,
             "in": "query",
-            "description": "Por defecto muestra activos e inactivos.",
+            "description": "By default both active and inactive are shown.",
             "schema": {
               "example": true,
               "type": "boolean"
@@ -144,11 +144,11 @@
             }
           }
         },
-        "summary": "Lista recursos con filtros y paginación",
+        "summary": "List resources with filters and pagination",
         "tags": ["Resources"]
       },
       "post": {
-        "description": "Alta de un recurso reservable dentro de un tipo existente.",
+        "description": "Registers a bookable resource under an existing type.",
         "operationId": "ResourcesController_create",
         "parameters": [],
         "requestBody": {
@@ -173,13 +173,13 @@
             }
           },
           "409": {
-            "description": "Ya existe un recurso con ese código"
+            "description": "A resource with that code already exists"
           },
           "422": {
-            "description": "La zona horaria no es válida"
+            "description": "The time zone is not valid"
           }
         },
-        "summary": "Crea un recurso",
+        "summary": "Create a resource",
         "tags": ["Resources"]
       }
     },
@@ -208,14 +208,14 @@
             }
           },
           "404": {
-            "description": "El recurso no existe"
+            "description": "The resource does not exist"
           }
         },
-        "summary": "Detalle de un recurso, con su tipo y horario semanal",
+        "summary": "Get one resource, with its type and weekly schedule",
         "tags": ["Resources"]
       },
       "patch": {
-        "description": "code y resourceTypeId no son editables: ambos identifican al recurso.",
+        "description": "code and resourceTypeId are not editable: both identify the resource.",
         "operationId": "ResourcesController_update",
         "parameters": [
           {
@@ -249,11 +249,11 @@
             }
           }
         },
-        "summary": "Actualiza un recurso",
+        "summary": "Update a resource",
         "tags": ["Resources"]
       },
       "delete": {
-        "description": "Baja lógica. El recurso deja de poder reservarse pero su histórico de reservas se conserva intacto, que es la razón de no borrarlo.",
+        "description": "A soft delete. The resource can no longer be booked, but its reservation history is kept intact -- which is the reason it is not deleted.",
         "operationId": "ResourcesController_deactivate",
         "parameters": [
           {
@@ -270,7 +270,7 @@
             "description": ""
           }
         },
-        "summary": "Da de baja un recurso",
+        "summary": "Deactivate a resource",
         "tags": ["Resources"]
       }
     },
@@ -299,13 +299,13 @@
             }
           }
         },
-        "summary": "Reactiva un recurso dado de baja",
+        "summary": "Reactivate a deactivated resource",
         "tags": ["Resources"]
       }
     },
     "/api/v1/resource-types": {
       "get": {
-        "description": "Familias de recursos reservables: salas, portátiles, vehículos.",
+        "description": "Families of bookable resources: rooms, laptops, vehicles.",
         "operationId": "ResourceTypesController_findAll",
         "parameters": [],
         "responses": {
@@ -323,11 +323,11 @@
             }
           }
         },
-        "summary": "Lista los tipos de recurso",
+        "summary": "List resource types",
         "tags": ["Resource types"]
       },
       "post": {
-        "description": "Dar de alta una familia nueva (vehículo, proyector) es esta llamada, no un despliegue.",
+        "description": "Registering a new family (vehicle, projector) is this call, not a deployment.",
         "operationId": "ResourceTypesController_create",
         "parameters": [],
         "requestBody": {
@@ -352,10 +352,10 @@
             }
           },
           "409": {
-            "description": "Ya existe un tipo con ese código"
+            "description": "A type with that code already exists"
           }
         },
-        "summary": "Crea un tipo de recurso",
+        "summary": "Create a resource type",
         "tags": ["Resource types"]
       }
     },
@@ -384,13 +384,13 @@
             }
           }
         },
-        "summary": "Detalle de un tipo de recurso",
+        "summary": "Get one resource type",
         "tags": ["Resource types"]
       }
     },
     "/api/v1/reservations": {
       "post": {
-        "description": "Aplica todas las reglas de negocio y garantiza que no haya solapes. Los intervalos son semiabiertos `[inicio, fin)`: una reserva que termina a las 11:00 no choca con otra que empieza a las 11:00.",
+        "description": "Applies every business rule and guarantees there is no overlap. Intervals are half-open `[start, end)`: a reservation ending at 11:00 does not clash with one starting at 11:00.",
         "operationId": "ReservationsController_create",
         "parameters": [
           {
@@ -404,7 +404,7 @@
           {
             "name": "Idempotency-Key",
             "in": "header",
-            "description": "Si se repite la petición con la misma clave se devuelve la reserva ya creada en lugar de crear una segunda.",
+            "description": "Repeating the request with the same key returns the reservation already created instead of creating a second one.",
             "required": false,
             "schema": {
               "type": "string"
@@ -433,24 +433,24 @@
             }
           },
           "409": {
-            "description": "El horario ya está ocupado (`OVERLAPPING_RESERVATION`, con el rango en conflicto), o alguna regla lo impide: fuera de horario, recurso bloqueado o límite de reservas alcanzado."
+            "description": "The slot is already taken (`OVERLAPPING_RESERVATION`, carrying the conflicting range), or a rule forbids it: outside operating hours, resource blocked, or the active reservation limit reached."
           },
           "422": {
-            "description": "Rango inválido, en el pasado, o asistentes por encima del aforo."
+            "description": "Invalid range, a range in the past, or attendees above capacity."
           }
         },
-        "summary": "Crea una reserva",
+        "summary": "Create a reservation",
         "tags": ["Reservations"]
       },
       "get": {
-        "description": "Sin rol admin solo se devuelven las propias, ignorando el parámetro userId. El rango devuelve las reservas que **se solapan** con él.",
+        "description": "Without the admin role only your own are returned, and the userId parameter is ignored. The range returns reservations that **overlap** it.",
         "operationId": "ReservationsController_findAll",
         "parameters": [
           {
             "name": "page",
             "required": false,
             "in": "query",
-            "description": "Página, empezando en 1.",
+            "description": "Page number, starting at 1.",
             "schema": {
               "minimum": 1,
               "default": 1,
@@ -461,7 +461,7 @@
             "name": "limit",
             "required": false,
             "in": "query",
-            "description": "Resultados por página.",
+            "description": "Results per page.",
             "schema": {
               "minimum": 1,
               "maximum": 100,
@@ -492,7 +492,7 @@
             "name": "resourceId",
             "required": false,
             "in": "query",
-            "description": "Filtra por recurso.",
+            "description": "Filter by resource.",
             "schema": {
               "format": "uuid",
               "type": "string"
@@ -502,7 +502,7 @@
             "name": "userId",
             "required": false,
             "in": "query",
-            "description": "Filtra por usuario. Sin rol admin se ignora: solo verás las tuyas.",
+            "description": "Filter by user. Ignored without the admin role: you only see your own.",
             "schema": {
               "type": "string"
             }
@@ -511,7 +511,7 @@
             "name": "resourceTypeId",
             "required": false,
             "in": "query",
-            "description": "Todas las reservas de una familia de recursos.",
+            "description": "Every reservation for one family of resources.",
             "schema": {
               "format": "uuid",
               "type": "string"
@@ -521,7 +521,7 @@
             "name": "status",
             "required": false,
             "in": "query",
-            "description": "Repetible: `?status=CONFIRMED&status=CANCELLED`.",
+            "description": "Repeatable: `?status=CONFIRMED&status=CANCELLED`.",
             "schema": {
               "type": "array",
               "items": {
@@ -534,7 +534,7 @@
             "name": "from",
             "required": false,
             "in": "query",
-            "description": "Devuelve las reservas que **se solapan** con el rango, no las contenidas\nen él: preguntar \"qué hay reservado esta semana\" debe incluir la reunión\nque empezó el viernes y termina el lunes.",
+            "description": "Returns the reservations that **overlap** the range, not those contained\nwithin it: asking \"what is booked this week\" must include the meeting\nthat started on Friday and ends on Monday.",
             "schema": {
               "example": "2026-09-01T00:00:00Z",
               "type": "string"
@@ -576,7 +576,7 @@
             }
           }
         },
-        "summary": "Lista reservas con filtros y paginación",
+        "summary": "List reservations with filters and pagination",
         "tags": ["Reservations"]
       }
     },
@@ -605,11 +605,11 @@
             }
           }
         },
-        "summary": "Detalle de una reserva",
+        "summary": "Get one reservation",
         "tags": ["Reservations"]
       },
       "patch": {
-        "description": "Reejecuta todas las reglas excluyéndose a sí misma, para que no colisione con su propio hueco actual.",
+        "description": "Re-runs every rule while excluding this reservation, so that it does not collide with the slot it currently occupies.",
         "operationId": "ReservationsController_reschedule",
         "parameters": [
           {
@@ -643,13 +643,13 @@
             }
           }
         },
-        "summary": "Reprograma una reserva",
+        "summary": "Reschedule a reservation",
         "tags": ["Reservations"]
       }
     },
     "/api/v1/reservations/{id}/cancellation": {
       "post": {
-        "description": "Idempotente: cancelar una reserva ya cancelada devuelve 200. El hueco queda libre de inmediato, porque la constraint solo indexa CONFIRMED.",
+        "description": "Idempotent: cancelling an already cancelled reservation returns 200. The slot is freed immediately, because the constraint only indexes CONFIRMED rows.",
         "operationId": "ReservationsController_cancel",
         "parameters": [
           {
@@ -683,13 +683,13 @@
             }
           }
         },
-        "summary": "Cancela una reserva",
+        "summary": "Cancel a reservation",
         "tags": ["Reservations"]
       }
     },
     "/api/v1/resources/{id}/availability": {
       "get": {
-        "description": "Parte del horario operativo del recurso y le resta bloqueos y reservas confirmadas. Los huecos son semiabiertos `[inicio, fin)`, igual que las reservas: uno que termina a las 11:00 deja las 11:00 libres.\n\nUn recurso sin horario configurado está disponible las 24 horas.",
+        "description": "Starts from the resource's operating hours and subtracts maintenance blocks and confirmed reservations. Slots are half-open `[start, end)`, exactly like reservations: one ending at 11:00 leaves 11:00 free.\n\nA resource with no schedule configured is available around the clock.",
         "operationId": "AvailabilityController_findSlots",
         "parameters": [
           {
@@ -704,7 +704,7 @@
             "name": "from",
             "required": true,
             "in": "query",
-            "description": "Inicio del rango a consultar, UTC ISO 8601.",
+            "description": "Start of the range to query, UTC ISO 8601.",
             "schema": {
               "example": "2026-12-15T00:00:00Z",
               "type": "string"
@@ -714,7 +714,7 @@
             "name": "to",
             "required": true,
             "in": "query",
-            "description": "Fin del rango. Máximo 60 días desde `from`.",
+            "description": "End of the range. At most 60 days from `from`.",
             "schema": {
               "example": "2026-12-16T00:00:00Z",
               "type": "string"
@@ -724,7 +724,7 @@
             "name": "minDurationMinutes",
             "required": false,
             "in": "query",
-            "description": "Descarta los huecos más cortos que esto.\n\nOfrecer un hueco de 15 minutos a quien necesita una hora solo produce un\nintento fallido.",
+            "description": "Discards slots shorter than this.\n\nOffering a 15-minute slot to someone who needs an hour only produces a\nfailed attempt.",
             "schema": {
               "minimum": 15,
               "maximum": 480,
@@ -748,23 +748,23 @@
             }
           },
           "422": {
-            "description": "Rango inválido o superior a 60 días"
+            "description": "Invalid range, or longer than 60 days"
           }
         },
-        "summary": "Huecos libres de un recurso en un rango",
+        "summary": "Free slots for a resource within a range",
         "tags": ["Availability"]
       }
     },
     "/api/v1/users": {
       "get": {
-        "description": "Incluye cuántas reservas futuras confirmadas tiene cada uno, para que el impacto de bloquear o degradar sea visible antes de hacerlo.",
+        "description": "Includes how many confirmed future reservations each one has, so the impact of banning or demoting is visible before doing it.",
         "operationId": "UsersController_findAll",
         "parameters": [
           {
             "name": "page",
             "required": false,
             "in": "query",
-            "description": "Página, empezando en 1.",
+            "description": "Page number, starting at 1.",
             "schema": {
               "minimum": 1,
               "default": 1,
@@ -775,7 +775,7 @@
             "name": "limit",
             "required": false,
             "in": "query",
-            "description": "Resultados por página.",
+            "description": "Results per page.",
             "schema": {
               "minimum": 1,
               "maximum": 100,
@@ -806,7 +806,7 @@
             "name": "q",
             "required": false,
             "in": "query",
-            "description": "Busca en nombre y correo.",
+            "description": "Searches name and email.",
             "schema": {
               "example": "ana",
               "type": "string"
@@ -839,11 +839,11 @@
             }
           }
         },
-        "summary": "Lista los usuarios",
+        "summary": "List users",
         "tags": ["Users"]
       },
       "post": {
-        "description": "Alta por parte de un administrador, sin pasar por el registro público. La delega en el proveedor de identidad, que es quien sabe cifrar la contraseña. Un proveedor que no pueda crear cuentas responde 501.",
+        "description": "Created by an administrator, bypassing public sign-up. Delegated to the identity provider, which is what knows how to hash the password. A provider that cannot create accounts answers 501.",
         "operationId": "UsersController_create",
         "parameters": [],
         "requestBody": {
@@ -868,16 +868,16 @@
             }
           },
           "409": {
-            "description": "Ya existe una cuenta con ese correo"
+            "description": "An account with that email already exists"
           }
         },
-        "summary": "Crea una cuenta",
+        "summary": "Create an account",
         "tags": ["Users"]
       }
     },
     "/api/v1/users/{id}": {
       "patch": {
-        "description": "El correo es la credencial con la que esa persona inicia sesión, así que cambiarlo cambia cómo entra. El rol se cambia por su propia ruta, porque tiene su propia regla: nadie puede degradarse a sí mismo.",
+        "description": "The email is the credential this person signs in with, so changing it changes how they get in. The role is changed through its own route, because it has its own rule: nobody can demote themselves.",
         "operationId": "UsersController_update",
         "parameters": [
           {
@@ -911,16 +911,16 @@
             }
           },
           "409": {
-            "description": "El correo ya está en uso por otra cuenta"
+            "description": "The email is already used by another account"
           }
         },
-        "summary": "Edita nombre y correo",
+        "summary": "Edit name and email",
         "tags": ["Users"]
       }
     },
     "/api/v1/users/{id}/role": {
       "patch": {
-        "description": "Un administrador no puede quitarse el rol a sí mismo: sería la forma más rápida de dejar el sistema sin nadie que pueda administrarlo.",
+        "description": "An administrator cannot remove their own role: it would be the quickest way to leave the system with nobody able to administer it.",
         "operationId": "UsersController_updateRole",
         "parameters": [
           {
@@ -954,16 +954,16 @@
             }
           },
           "409": {
-            "description": "Intento de auto-degradación"
+            "description": "Attempted self-demotion"
           }
         },
-        "summary": "Cambia el rol de un usuario",
+        "summary": "Change a user's role",
         "tags": ["Users"]
       }
     },
     "/api/v1/users/{id}/ban": {
       "post": {
-        "description": "Surte efecto de inmediato: el adaptador rechaza al usuario bloqueado en cada petición, no solo al iniciar sesión, y además se revocan sus sesiones abiertas. Sin `days` el bloqueo es indefinido.",
+        "description": "Takes effect immediately: the adapter rejects a banned user on every request, not only at sign-in, and their open sessions are revoked. Without `days` the ban is indefinite.",
         "operationId": "UsersController_ban",
         "parameters": [
           {
@@ -997,10 +997,10 @@
             }
           },
           "409": {
-            "description": "Intento de bloquearse a sí mismo"
+            "description": "Attempted self-ban"
           }
         },
-        "summary": "Bloquea a un usuario",
+        "summary": "Ban a user",
         "tags": ["Users"]
       },
       "delete": {
@@ -1027,7 +1027,7 @@
             }
           }
         },
-        "summary": "Desbloquea a un usuario",
+        "summary": "Unban a user",
         "tags": ["Users"]
       }
     },
@@ -1182,14 +1182,14 @@
             }
           }
         },
-        "summary": "Estado del servicio y de sus dependencias",
+        "summary": "Service health and that of its dependencies",
         "tags": ["Health"]
       }
     }
   },
   "info": {
     "title": "Shared Resource Booking API",
-    "description": "API de reservas de recursos compartidos.\n\n**Regla central:** dos reservas `CONFIRMED` nunca se solapan en el mismo recurso.\nLos intervalos son semiabiertos `[start, end)`, así que 10:00–11:00 y 11:00–12:00\nson contiguas y ambas válidas.\n\nLos errores siguen RFC 7807 (`application/problem+json`).",
+    "description": "Booking API for shared resources.\n\n**Central rule:** two `CONFIRMED` reservations never overlap on the same resource.\nIntervals are half-open `[start, end)`, so 10:00–11:00 and 11:00–12:00 are\ncontiguous and both valid.\n\nErrors follow RFC 7807 (`application/problem+json`).",
     "version": "0.3.1",
     "contact": {}
   },
@@ -1200,7 +1200,7 @@
     },
     {
       "name": "Resource types",
-      "description": "Resource families and their attribute schema"
+      "description": "Families of bookable resources"
     },
     {
       "name": "Resources",
@@ -1347,7 +1347,7 @@
           },
           "capacity": {
             "type": "number",
-            "description": "Aforo máximo. Se contrasta con los asistentes de cada reserva.",
+            "description": "Maximum capacity. Checked against each reservation's attendees.",
             "minimum": 1,
             "example": 12
           },
@@ -1358,25 +1358,25 @@
           },
           "timeZone": {
             "type": "string",
-            "description": "Zona IANA, por ejemplo Europe/Madrid.\n\nEl horario operativo se interpreta en esta zona; los instantes se guardan\nsiempre en UTC.",
+            "description": "IANA zone, for example Europe/Madrid.\n\nOperating hours are interpreted in this zone; instants are always stored\nin UTC.",
             "maxLength": 64,
             "example": "Europe/Madrid",
             "default": "UTC"
           },
           "resourceTypeId": {
             "type": "string",
-            "description": "Tipo al que pertenece. Determina qué atributos son válidos.",
+            "description": "The type it belongs to.",
             "format": "uuid"
           },
           "code": {
             "type": "string",
-            "description": "Código único y estable. Minúsculas, números y guiones.",
+            "description": "Unique, stable code. Lowercase letters, digits and hyphens.",
             "maxLength": 60,
             "pattern": "^[a-z0-9-]+$"
           },
           "name": {
             "type": "string",
-            "description": "Nombre visible.",
+            "description": "Display name.",
             "maxLength": 160
           }
         },
@@ -1390,7 +1390,7 @@
           },
           "capacity": {
             "type": "number",
-            "description": "Aforo máximo. Se contrasta con los asistentes de cada reserva.",
+            "description": "Maximum capacity. Checked against each reservation's attendees.",
             "minimum": 1,
             "example": 12
           },
@@ -1401,14 +1401,14 @@
           },
           "timeZone": {
             "type": "string",
-            "description": "Zona IANA, por ejemplo Europe/Madrid.\n\nEl horario operativo se interpreta en esta zona; los instantes se guardan\nsiempre en UTC.",
+            "description": "IANA zone, for example Europe/Madrid.\n\nOperating hours are interpreted in this zone; instants are always stored\nin UTC.",
             "maxLength": 64,
             "example": "Europe/Madrid",
             "default": "UTC"
           },
           "name": {
             "type": "string",
-            "description": "Nombre visible.",
+            "description": "Display name.",
             "maxLength": 160
           }
         }
@@ -1421,13 +1421,13 @@
           },
           "code": {
             "type": "string",
-            "description": "Código único y estable. Minúsculas, números y guiones.",
+            "description": "Unique, stable code. Lowercase letters, digits and hyphens.",
             "maxLength": 60,
             "pattern": "^[a-z0-9-]+$"
           },
           "name": {
             "type": "string",
-            "description": "Nombre visible del tipo.",
+            "description": "Display name of the type.",
             "maxLength": 120
           }
         },
@@ -1438,17 +1438,17 @@
         "properties": {
           "startAt": {
             "type": "string",
-            "description": "Inicio en UTC, ISO 8601. **Inclusivo.**\n\nDebe caer en un múltiplo de 15 minutos.",
+            "description": "Start in UTC, ISO 8601. **Inclusive.**\n\nMust fall on a multiple of 15 minutes.",
             "example": "2026-09-15T10:00:00Z"
           },
           "endAt": {
             "type": "string",
-            "description": "Fin en UTC, ISO 8601. **Exclusivo.**\n\nUna reserva que termina a las 11:00 no colisiona con otra que empieza a\nlas 11:00: los intervalos son semiabiertos `[inicio, fin)`.",
+            "description": "End in UTC, ISO 8601. **Exclusive.**\n\nA reservation ending at 11:00 does not collide with one starting at\n11:00: intervals are half-open `[start, end)`.",
             "example": "2026-09-15T11:00:00Z"
           },
           "attendees": {
             "type": "number",
-            "description": "Asistentes previstos. Se contrasta con el aforo del recurso.",
+            "description": "Expected attendees. Checked against the resource's capacity.",
             "minimum": 1,
             "example": 8
           },
@@ -1457,12 +1457,12 @@
           },
           "resourceId": {
             "type": "string",
-            "description": "Recurso a reservar.",
+            "description": "The resource to book.",
             "format": "uuid"
           },
           "title": {
             "type": "string",
-            "description": "Título visible en la agenda.",
+            "description": "Title shown in the schedule.",
             "maxLength": 160
           }
         },
@@ -1480,12 +1480,12 @@
           "startAt": {
             "format": "date-time",
             "type": "string",
-            "description": "Inicio en UTC. Inclusivo."
+            "description": "Start in UTC. Inclusive."
           },
           "endAt": {
             "format": "date-time",
             "type": "string",
-            "description": "Fin en UTC. **Exclusivo.**"
+            "description": "End in UTC. **Exclusive.**"
           },
           "status": {
             "enum": ["CONFIRMED", "CANCELLED", "COMPLETED"],
@@ -1538,9 +1538,9 @@
         "properties": {
           "reason": {
             "type": "string",
-            "description": "Motivo de la cancelación. Queda registrado.",
+            "description": "Reason for the cancellation. It is recorded.",
             "maxLength": 300,
-            "example": "Se pospone la reunión"
+            "example": "The meeting is postponed"
           }
         }
       },
@@ -1550,12 +1550,12 @@
           "startAt": {
             "format": "date-time",
             "type": "string",
-            "description": "Inicio del hueco, UTC. Inclusivo."
+            "description": "Start of the slot, UTC. Inclusive."
           },
           "endAt": {
             "format": "date-time",
             "type": "string",
-            "description": "Fin del hueco, UTC. **Exclusivo.**"
+            "description": "End of the slot, UTC. **Exclusive.**"
           },
           "durationMinutes": {
             "type": "number",
@@ -1563,7 +1563,7 @@
           },
           "timeZone": {
             "type": "string",
-            "description": "Zona en la que el cliente debe pintar el hueco.\n\nVa en cada slot para que el cliente no tenga que cruzarlo con el recurso\nen una segunda petición solo para saber cómo mostrarlo.",
+            "description": "The zone the client should render the slot in.\n\nCarried on every slot so the client does not have to cross-reference the\nresource in a second request just to know how to display it.",
             "example": "Europe/Madrid"
           }
         },
@@ -1617,18 +1617,18 @@
         "properties": {
           "password": {
             "type": "string",
-            "description": "Mínimo 10 caracteres, igual que en el registro público.",
+            "description": "At least 10 characters, the same as public sign-up.",
             "minLength": 10
           },
           "role": {
-            "description": "Por defecto `user`.",
+            "description": "Defaults to `user`.",
             "enum": ["admin", "user"],
             "type": "string",
             "default": "user"
           },
           "email": {
             "type": "string",
-            "description": "Correo, único en el sistema.",
+            "description": "Email, unique across the system.",
             "format": "email"
           },
           "name": {
@@ -1643,12 +1643,12 @@
         "properties": {
           "name": {
             "type": "string",
-            "description": "Nombre visible.",
+            "description": "Display name.",
             "maxLength": 120
           },
           "email": {
             "type": "string",
-            "description": "Correo. Debe seguir siendo único.\n\nCambiarlo cambia la credencial con la que esa persona inicia sesión, así\nque la interfaz lo advierte antes de guardar.",
+            "description": "Email. It must remain unique.\n\nChanging it changes the credential this person signs in with, which is\nwhy the interface warns before saving.",
             "format": "email"
           }
         }
@@ -1657,7 +1657,7 @@
         "type": "object",
         "properties": {
           "role": {
-            "description": "Nuevo rol. Solo `admin` o `user`.",
+            "description": "The new role. Only `admin` or `user`.",
             "enum": ["admin", "user"],
             "type": "string"
           }
@@ -1669,13 +1669,13 @@
         "properties": {
           "reason": {
             "type": "string",
-            "description": "Motivo del bloqueo. Queda registrado.",
+            "description": "Reason for the ban. It is recorded.",
             "maxLength": 300,
-            "example": "Uso indebido de las salas"
+            "example": "Misuse of the meeting rooms"
           },
           "days": {
             "type": "number",
-            "description": "Duración en días. Sin valor, el bloqueo es indefinido.\n\nBetter Auth levanta el bloqueo por sí solo al vencer, así que no hace\nfalta ningún proceso programado que lo revise.",
+            "description": "Duration in days. With no value the ban is indefinite.\n\nBetter Auth lifts the ban itself once it expires, so no scheduled job is\nneeded to check for it.",
             "minimum": 1,
             "example": 30
           }

@@ -15,15 +15,15 @@ export class AvailabilityController {
 
   @Get()
   @ApiOperation({
-    summary: 'Huecos libres de un recurso en un rango',
+    summary: 'Free slots for a resource within a range',
     description:
-      'Parte del horario operativo del recurso y le resta bloqueos y reservas ' +
-      'confirmadas. Los huecos son semiabiertos `[inicio, fin)`, igual que las ' +
-      'reservas: uno que termina a las 11:00 deja las 11:00 libres.\n\n' +
-      'Un recurso sin horario configurado está disponible las 24 horas.',
+      "Starts from the resource's operating hours and subtracts maintenance " +
+      'blocks and confirmed reservations. Slots are half-open `[start, end)`, ' +
+      'exactly like reservations: one ending at 11:00 leaves 11:00 free.\n\n' +
+      'A resource with no schedule configured is available around the clock.',
   })
   @ApiOkResponse({ type: [AvailabilitySlotDto] })
-  @ApiUnprocessableEntityResponse({ description: 'Rango inválido o superior a 60 días' })
+  @ApiUnprocessableEntityResponse({ description: 'Invalid range, or longer than 60 days' })
   findSlots(
     @Param('id', ParseUUIDPipe) id: string,
     @Query() query: AvailabilityQueryDto,

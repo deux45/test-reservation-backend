@@ -40,7 +40,7 @@ export class AuthController {
    * and not to Better Auth's.
    */
   @Get('me')
-  @ApiOperation({ summary: 'Usuario de la sesión actual' })
+  @ApiOperation({ summary: 'The current session user' })
   me(@CurrentUser() user: AuthenticatedUser): AuthenticatedUser {
     return user;
   }

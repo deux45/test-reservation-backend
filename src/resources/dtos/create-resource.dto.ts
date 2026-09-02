@@ -2,11 +2,11 @@ import { ApiPropertyOptional } from '@nestjs/swagger';
 import { IsInt, IsOptional, IsString, IsUUID, Matches, MaxLength, Min } from 'class-validator';
 
 export class CreateResourceDto {
-  /** Tipo al que pertenece. Determina qué atributos son válidos. */
+  /** The type it belongs to. */
   @IsUUID()
   resourceTypeId: string;
 
-  /** Código único y estable. Minúsculas, números y guiones. */
+  /** Unique, stable code. Lowercase letters, digits and hyphens. */
   @IsString()
   @MaxLength(60)
   @Matches(/^[a-z0-9-]+$/, {
@@ -14,7 +14,7 @@ export class CreateResourceDto {
   })
   code: string;
 
-  /** Nombre visible. */
+  /** Display name. */
   @IsString()
   @MaxLength(160)
   name: string;
@@ -24,7 +24,7 @@ export class CreateResourceDto {
   @IsString()
   description?: string;
 
-  /** Aforo máximo. Se contrasta con los asistentes de cada reserva. */
+  /** Maximum capacity. Checked against each reservation's attendees. */
   @ApiPropertyOptional({ example: 12 })
   @IsOptional()
   @IsInt()
@@ -38,10 +38,10 @@ export class CreateResourceDto {
   location?: string;
 
   /**
-   * Zona IANA, por ejemplo Europe/Madrid.
+   * IANA zone, for example Europe/Madrid.
    *
-   * El horario operativo se interpreta en esta zona; los instantes se guardan
-   * siempre en UTC.
+   * Operating hours are interpreted in this zone; instants are always stored
+   * in UTC.
    */
   @ApiPropertyOptional({ example: 'Europe/Madrid', default: 'UTC' })
   @IsOptional()

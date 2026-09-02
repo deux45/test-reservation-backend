@@ -5,25 +5,25 @@ import { PaginationQueryDto } from '../../common/dtos/pagination-query.dto';
 import { ReservationStatus } from '../enums/reservation-status.enum';
 
 export class FilterReservationsDto extends PaginationQueryDto {
-  /** Filtra por recurso. */
+  /** Filter by resource. */
   @ApiPropertyOptional()
   @IsOptional()
   @IsUUID()
   resourceId?: string;
 
-  /** Filtra por usuario. Sin rol admin se ignora: solo verás las tuyas. */
+  /** Filter by user. Ignored without the admin role: you only see your own. */
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
   userId?: string;
 
-  /** Todas las reservas de una familia de recursos. */
+  /** Every reservation for one family of resources. */
   @ApiPropertyOptional()
   @IsOptional()
   @IsUUID()
   resourceTypeId?: string;
 
-  /** Repetible: `?status=CONFIRMED&status=CANCELLED`. */
+  /** Repeatable: `?status=CONFIRMED&status=CANCELLED`. */
   @ApiPropertyOptional({ enum: ReservationStatus, isArray: true })
   @IsOptional()
   // A single occurrence arrives as a string, several as an array. Normalising
@@ -36,9 +36,9 @@ export class FilterReservationsDto extends PaginationQueryDto {
   status?: ReservationStatus[];
 
   /**
-   * Devuelve las reservas que **se solapan** con el rango, no las contenidas
-   * en él: preguntar "qué hay reservado esta semana" debe incluir la reunión
-   * que empezó el viernes y termina el lunes.
+   * Returns the reservations that **overlap** the range, not those contained
+   * within it: asking "what is booked this week" must include the meeting
+   * that started on Friday and ends on Monday.
    */
   @ApiPropertyOptional({ example: '2026-09-01T00:00:00Z' })
   @IsOptional()

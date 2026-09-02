@@ -18,8 +18,8 @@ export class ResourceTypesController {
 
   @Get()
   @ApiOperation({
-    summary: 'Lista los tipos de recurso',
-    description: 'Familias de recursos reservables: salas, portátiles, vehículos.',
+    summary: 'List resource types',
+    description: 'Families of bookable resources: rooms, laptops, vehicles.',
   })
   @ApiOkResponse({ type: [ResourceTypeDto] })
   findAll(): Promise<ResourceTypeDto[]> {
@@ -27,7 +27,7 @@ export class ResourceTypesController {
   }
 
   @Get(':id')
-  @ApiOperation({ summary: 'Detalle de un tipo de recurso' })
+  @ApiOperation({ summary: 'Get one resource type' })
   @ApiOkResponse({ type: ResourceTypeDto })
   findOne(@Param('id', ParseUUIDPipe) id: string): Promise<ResourceTypeDto> {
     return this.service.findById(id);
@@ -36,12 +36,11 @@ export class ResourceTypesController {
   @Post()
   @Roles('admin')
   @ApiOperation({
-    summary: 'Crea un tipo de recurso',
-    description:
-      'Dar de alta una familia nueva (vehículo, proyector) es esta llamada, no un despliegue.',
+    summary: 'Create a resource type',
+    description: 'Registering a new family (vehicle, projector) is this call, not a deployment.',
   })
   @ApiCreatedResponse({ type: ResourceTypeDto })
-  @ApiConflictResponse({ description: 'Ya existe un tipo con ese código' })
+  @ApiConflictResponse({ description: 'A type with that code already exists' })
   create(@Body() dto: CreateResourceTypeDto): Promise<ResourceTypeDto> {
     return this.service.create(dto);
   }

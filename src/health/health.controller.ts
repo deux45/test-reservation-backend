@@ -26,7 +26,7 @@ export class HealthController {
    */
   @Get()
   @HealthCheck()
-  @ApiOperation({ summary: 'Estado del servicio y de sus dependencias' })
+  @ApiOperation({ summary: 'Service health and that of its dependencies' })
   check(): Promise<HealthCheckResult> {
     return this.health.check([() => this.database.pingCheck('database', { timeout: 1500 })]);
   }

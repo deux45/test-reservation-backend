@@ -22,10 +22,10 @@ export class UsersController {
 
   @Get()
   @ApiOperation({
-    summary: 'Lista los usuarios',
+    summary: 'List users',
     description:
-      'Incluye cuántas reservas futuras confirmadas tiene cada uno, para que ' +
-      'el impacto de bloquear o degradar sea visible antes de hacerlo.',
+      'Includes how many confirmed future reservations each one has, so the ' +
+      'impact of banning or demoting is visible before doing it.',
   })
   @ApiPaginatedResponse(UserDto)
   findAll(@Query() filters: FilterUsersDto): Promise<PaginatedResult<UserDto>> {
@@ -34,41 +34,41 @@ export class UsersController {
 
   @Post()
   @ApiOperation({
-    summary: 'Crea una cuenta',
+    summary: 'Create an account',
     description:
-      'Alta por parte de un administrador, sin pasar por el registro público. ' +
-      'La delega en el proveedor de identidad, que es quien sabe cifrar la ' +
-      'contraseña. Un proveedor que no pueda crear cuentas responde 501.',
+      'Created by an administrator, bypassing public sign-up. Delegated to the ' +
+      'identity provider, which is what knows how to hash the password. A ' +
+      'provider that cannot create accounts answers 501.',
   })
   @ApiCreatedResponse({ type: UserDto })
-  @ApiConflictResponse({ description: 'Ya existe una cuenta con ese correo' })
+  @ApiConflictResponse({ description: 'An account with that email already exists' })
   create(@Body() dto: CreateUserDto): Promise<UserDto> {
     return this.service.create(dto);
   }
 
   @Patch(':id')
   @ApiOperation({
-    summary: 'Edita nombre y correo',
+    summary: 'Edit name and email',
     description:
-      'El correo es la credencial con la que esa persona inicia sesión, así ' +
-      'que cambiarlo cambia cómo entra. El rol se cambia por su propia ruta, ' +
-      'porque tiene su propia regla: nadie puede degradarse a sí mismo.',
+      'The email is the credential this person signs in with, so changing it ' +
+      'changes how they get in. The role is changed through its own route, ' +
+      'because it has its own rule: nobody can demote themselves.',
   })
   @ApiOkResponse({ type: UserDto })
-  @ApiConflictResponse({ description: 'El correo ya está en uso por otra cuenta' })
+  @ApiConflictResponse({ description: 'The email is already used by another account' })
   update(@Param('id') id: string, @Body() dto: UpdateUserDto): Promise<UserDto> {
     return this.service.update(id, dto);
   }
 
   @Patch(':id/role')
   @ApiOperation({
-    summary: 'Cambia el rol de un usuario',
+    summary: "Change a user's role",
     description:
-      'Un administrador no puede quitarse el rol a sí mismo: sería la forma ' +
-      'más rápida de dejar el sistema sin nadie que pueda administrarlo.',
+      'An administrator cannot remove their own role: it would be the quickest ' +
+      'way to leave the system with nobody able to administer it.',
   })
   @ApiOkResponse({ type: UserDto })
-  @ApiConflictResponse({ description: 'Intento de auto-degradación' })
+  @ApiConflictResponse({ description: 'Attempted self-demotion' })
   updateRole(
     @Param('id') id: string,
     @Body() dto: UpdateRoleDto,
@@ -85,14 +85,14 @@ export class UsersController {
    */
   @Post(':id/ban')
   @ApiOperation({
-    summary: 'Bloquea a un usuario',
+    summary: 'Ban a user',
     description:
-      'Surte efecto de inmediato: el adaptador rechaza al usuario bloqueado ' +
-      'en cada petición, no solo al iniciar sesión, y además se revocan sus ' +
-      'sesiones abiertas. Sin `days` el bloqueo es indefinido.',
+      'Takes effect immediately: the adapter rejects a banned user on every ' +
+      'request, not only at sign-in, and their open sessions are revoked. ' +
+      'Without `days` the ban is indefinite.',
   })
   @ApiOkResponse({ type: UserDto })
-  @ApiConflictResponse({ description: 'Intento de bloquearse a sí mismo' })
+  @ApiConflictResponse({ description: 'Attempted self-ban' })
   ban(
     @Param('id') id: string,
     @Body() dto: BanUserDto,
@@ -102,7 +102,7 @@ export class UsersController {
   }
 
   @Delete(':id/ban')
-  @ApiOperation({ summary: 'Desbloquea a un usuario' })
+  @ApiOperation({ summary: 'Unban a user' })
   @ApiOkResponse({ type: UserDto })
   unban(@Param('id') id: string): Promise<UserDto> {
     return this.service.unban(id);

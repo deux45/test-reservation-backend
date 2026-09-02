@@ -34,28 +34,28 @@ export class ReservationsController {
 
   @Post()
   @ApiOperation({
-    summary: 'Crea una reserva',
+    summary: 'Create a reservation',
     description:
-      'Aplica todas las reglas de negocio y garantiza que no haya solapes. ' +
-      'Los intervalos son semiabiertos `[inicio, fin)`: una reserva que ' +
-      'termina a las 11:00 no choca con otra que empieza a las 11:00.',
+      'Applies every business rule and guarantees there is no overlap. ' +
+      'Intervals are half-open `[start, end)`: a reservation ending at 11:00 ' +
+      'does not clash with one starting at 11:00.',
   })
   @ApiHeader({
     name: 'Idempotency-Key',
     required: false,
     description:
-      'Si se repite la petición con la misma clave se devuelve la reserva ya ' +
-      'creada en lugar de crear una segunda.',
+      'Repeating the request with the same key returns the reservation already ' +
+      'created instead of creating a second one.',
   })
   @ApiCreatedResponse({ type: ReservationDto })
   @ApiConflictResponse({
     description:
-      'El horario ya está ocupado (`OVERLAPPING_RESERVATION`, con el rango en ' +
-      'conflicto), o alguna regla lo impide: fuera de horario, recurso ' +
-      'bloqueado o límite de reservas alcanzado.',
+      'The slot is already taken (`OVERLAPPING_RESERVATION`, carrying the ' +
+      'conflicting range), or a rule forbids it: outside operating hours, ' +
+      'resource blocked, or the active reservation limit reached.',
   })
   @ApiUnprocessableEntityResponse({
-    description: 'Rango inválido, en el pasado, o asistentes por encima del aforo.',
+    description: 'Invalid range, a range in the past, or attendees above capacity.',
   })
   create(
     @Body() dto: CreateReservationDto,
@@ -67,10 +67,10 @@ export class ReservationsController {
 
   @Get()
   @ApiOperation({
-    summary: 'Lista reservas con filtros y paginación',
+    summary: 'List reservations with filters and pagination',
     description:
-      'Sin rol admin solo se devuelven las propias, ignorando el parámetro ' +
-      'userId. El rango devuelve las reservas que **se solapan** con él.',
+      'Without the admin role only your own are returned, and the userId ' +
+      'parameter is ignored. The range returns reservations that **overlap** it.',
   })
   @ApiPaginatedResponse(ReservationDto)
   findAll(
@@ -81,7 +81,7 @@ export class ReservationsController {
   }
 
   @Get(':id')
-  @ApiOperation({ summary: 'Detalle de una reserva' })
+  @ApiOperation({ summary: 'Get one reservation' })
   @ApiOkResponse({ type: ReservationDto })
   findOne(
     @Param('id', ParseUUIDPipe) id: string,
@@ -92,10 +92,10 @@ export class ReservationsController {
 
   @Patch(':id')
   @ApiOperation({
-    summary: 'Reprograma una reserva',
+    summary: 'Reschedule a reservation',
     description:
-      'Reejecuta todas las reglas excluyéndose a sí misma, para que no ' +
-      'colisione con su propio hueco actual.',
+      'Re-runs every rule while excluding this reservation, so that it does ' +
+      'not collide with the slot it currently occupies.',
   })
   @ApiOkResponse({ type: ReservationDto })
   reschedule(
@@ -114,10 +114,11 @@ export class ReservationsController {
    */
   @Post(':id/cancellation')
   @ApiOperation({
-    summary: 'Cancela una reserva',
+    summary: 'Cancel a reservation',
     description:
-      'Idempotente: cancelar una reserva ya cancelada devuelve 200. El hueco ' +
-      'queda libre de inmediato, porque la constraint solo indexa CONFIRMED.',
+      'Idempotent: cancelling an already cancelled reservation returns 200. ' +
+      'The slot is freed immediately, because the constraint only indexes ' +
+      'CONFIRMED rows.',
   })
   @ApiOkResponse({ type: ReservationDto })
   cancel(
