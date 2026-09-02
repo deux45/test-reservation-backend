@@ -11,6 +11,12 @@ and the versioning follows [Semantic Versioning](https://semver.org/).
 >
 > Cutting a release: `npm run release` (or the _Release_ workflow on GitHub).
 
+## [0.3.3](///compare/v0.3.2...v0.3.3) (2026-09-02)
+
+### Documentation
+
+- add a "Trying the API" walkthrough with real requests 71e77e3
+
 ## [0.3.2](///compare/v0.3.1...v0.3.2) (2026-09-02)
 
 ### Features
