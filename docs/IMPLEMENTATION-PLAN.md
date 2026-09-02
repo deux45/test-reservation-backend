@@ -1785,43 +1785,90 @@ networks:
     external: true # se une a la red que crea el compose del backend
 ```
 
-### 5.4 Comandos
+### 5.4 El Makefile — una sola puerta de entrada
+
+Los dos repositorios exponen sus operaciones a través de un `Makefile`. No es
+azúcar sintáctico: resuelve tres problemas concretos que un README con una lista de
+comandos no resuelve.
+
+**El orden importa y nadie lo recuerda.** Levantar esto de cero son cinco pasos
+—construir, esperar a que PostgreSQL acepte conexiones, migrar, sembrar, arrancar— y
+hacerlos en otro orden produce errores que no explican nada. `docker compose up` con
+la API antes de que la base de datos esté sana da un `ECONNREFUSED`; migrar antes de
+que exista el esquema da un error de TypeORM sobre una tabla que nadie mencionó. El
+Makefile codifica el orden una vez.
+
+**La documentación de comandos se queda obsoleta; un objetivo que se ejecuta, no.** Un
+README que dice `npm run seed` sigue diciéndolo mucho después de que el script se
+renombre. Un `make seed` roto se detecta la primera vez que alguien lo usa.
+
+**Iguala el equipo con CI.** `make check` corre exactamente lo mismo que valida el
+workflow. Cuando lo que se ejecuta en local y lo que ejecuta CI son dos listas
+mantenidas por separado, divergen.
+
+#### El contrato
+
+Un solo comando, desde un clon recién bajado, con Docker como única dependencia:
 
 ```bash
-# --- Arranque local completo, desde cero ---
-cd test-reservas-backend
-cp .env.example .env
-docker compose up -d --build          # postgres + api + adminer
-docker compose exec api npm run migration:run
-docker compose exec api npm run seed
-
-cd ../test-reservas-front
-cp .env.example .env.local
-docker compose up -d --build          # se une a reservations-net
-
-# API      → http://localhost:3000/api/docs
-# Front    → http://localhost:3001
-# Adminer  → http://localhost:8080
+make start
 ```
 
-```bash
-# --- Pruebas dentro de Docker ---
-docker compose exec api npm run test:unit
-docker compose exec api npm run test:e2e     # Testcontainers levanta su propio Postgres
-docker compose exec api npm run test:cov
+Sin Node en el equipo, sin `.env` que escribir, sin pasos que recordar. Construye
+las imágenes, levanta PostgreSQL, **espera a que la API responda de verdad**, aplica
+las migraciones, carga los datos de demostración e imprime las URLs y las
+credenciales.
+
+En el frontend el mismo comando comprueba si la API está levantada y la arranca si no
+lo está, delegando en el Makefile del backend. Un repositorio que es un cliente debe
+poder arrancar su dependencia, o el primer contacto con el proyecto es un
+`network reservations-net not found`.
+
+#### Convenciones
+
+```makefile
+SHELL := /bin/sh
+.DEFAULT_GOAL := help          # make sin argumentos documenta, no ejecuta
+
+.PHONY: help up down start ...  # todos los objetivos son verbos, no ficheros
+
+start: ## Arranque completo desde cero
+	...
 ```
 
-```bash
-# --- Producción ---
-docker network create reservations-net
-docker compose -f docker-compose.prod.yml up -d
-docker compose -f docker-compose.prod.yml run --rm api npm run migration:run
-```
+- **`.DEFAULT_GOAL := help`.** `make` a secas lista los objetivos. Un Makefile cuyo
+  objetivo por defecto reconstruye medio proyecto es una trampa.
+- **`.PHONY` en todos.** Sin él, un objetivo llamado `test` se salta silenciosamente
+  cuando existe un directorio `test` —que existe—.
+- **La ayuda se genera del propio fichero.** Cada objetivo lleva un comentario `##` y
+  `help` los extrae con `awk`. La ayuda no puede desincronizarse porque no está
+  duplicada.
+- **Espera activa, no `sleep`.** `up` hace polling contra `/health` hasta 120 s en vez
+  de dormir un número inventado de segundos. Un `sleep 10` falla en un portátil lento
+  y desperdicia ocho segundos en uno rápido.
+- **Todo dentro de contenedores.** Los objetivos delegan en `docker compose exec`, así
+  que el resultado no depende de qué versión de Node haya en el equipo.
 
-> **Testcontainers dentro de Docker.** Para que la suite e2e funcione desde el contenedor
-> hay que montar el socket del demonio (`/var/run/docker.sock`) o, más simple, ejecutar
-> `npm run test:e2e` **en el host** con Docker Desktop activo. Es la opción recomendada y
-> la que documenta el README: menos ceremonia y ningún privilegio extra en el contenedor.
+#### Objetivos
+
+|               | Backend                                                              | Frontend                                                       |
+| ------------- | -------------------------------------------------------------------- | -------------------------------------------------------------- |
+| Arranque      | `start` `up` `down` `stop` `restart` `reset`                         | `start` `up` `down` `stop` `restart` `api-up`                  |
+| Base de datos | `migrate` `migrate-revert` `migrate-status` `seed` `db-reset` `psql` | —                                                              |
+| Pruebas       | `test` `test-cov` `test-e2e` `verify-overlap` `verify-concurrency`   | `test` `test-cov` `e2e` `e2e-ui`                               |
+| Calidad       | `lint` `format` `typecheck` `check` `audit`                          | igual                                                          |
+| Otros         | `logs` `shell` `openapi` `build` `prod-up` `release` `clean`         | `logs` `shell` `api-types` `build` `prod-up` `release` `clean` |
+
+`verify-overlap` y `verify-concurrency` merecen estar aquí y no sólo en la suite de
+tests: son la demostración de la regla central de la prueba, y que se ejecuten con un
+comando de una palabra es parte de la entrega.
+
+#### Sobre Windows
+
+`make` no viene instalado. Se resuelve con `winget install GnuWin32.Make`, con
+Chocolatey o desde WSL, y los READMEs incluyen los comandos equivalentes en
+`docker compose` por si alguien prefiere no instalar nada. El Makefile es un atajo,
+no un requisito: nada de lo que hace es inaccesible sin él.
 
 ### 5.5 Versionado semántico y changelog
 
@@ -2257,12 +2304,15 @@ _Revalidar con `npm run audit:osv` antes de entregar._
 
 Cosas que solo aparecen ejecutando, anotadas aquí para no volver a tropezar.
 
-| Síntoma                                                          | Causa                                                                                                                                     | Solución                                                                                                                                            |
-| ---------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `CHANGELOG.md` con la cabecera duplicada tras la primera release | `commit-and-tag-version` **antepone** su cabecera; no reemplaza la existente. Un fichero semilla con texto propio queda debajo.           | Sembrar `CHANGELOG.md` **vacío**. La nota de «fichero generado» va en `header` dentro de `.versionrc.json`, que es lo que sobrevive a cada release. |
-| Los hooks de git no se ejecutan                                  | `npm ci --ignore-scripts` (política de §2) salta el script `prepare`, que es el que instala husky.                                        | Ejecutar `npm run prepare` una vez tras el primer install. Es el precio de `ignore-scripts`, y es barato.                                           |
-| `MODULE_NOT_FOUND: './app.module'` en el contenedor              | `incremental: true` + `deleteOutDir: true`: se borra `dist` pero sobrevive el `.tsbuildinfo`, así que la build incremental no emite nada. | `tsBuildInfoFile` dentro de `dist`.                                                                                                                 |
-| Editar `tsconfig.json` no tiene efecto en Docker                 | Solo `src/` estaba bind-mounteado.                                                                                                        | Montar también `tsconfig*.json` y `nest-cli.json` (§5.1).                                                                                           |
-| Todo `POST` responde 400 con «todos los campos faltan»           | `bodyParser: false` desactiva el parser de **toda** la app, no solo de `/api/auth`.                                                       | Reactivar `express.json()` salvo para `/api/auth` (§3.7).                                                                                           |
-| La app no arranca: «circular dependency (property key: data)»    | Swagger no resuelve el genérico `T` de `PaginatedResponseDto`.                                                                            | Declarar `data` explícito como array de objetos; `allOf` compone el tipo real.                                                                      |
-| `sign-up` da 500: `column "issuer" does not exist`               | `@better-auth/cli` empaqueta better-auth 1.6.21; la 1.7 añadió la columna.                                                                | Obtener el delta de `getMigrations()` del paquete instalado, no del CLI (§3.10).                                                                    |
+| Síntoma                                                                                            | Causa                                                                                                                                                                                                                  | Solución                                                                                                                                                                                    |
+| -------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `CHANGELOG.md` con la cabecera duplicada tras la primera release                                   | `commit-and-tag-version` **antepone** su cabecera; no reemplaza la existente. Un fichero semilla con texto propio queda debajo.                                                                                        | Sembrar `CHANGELOG.md` **vacío**. La nota de «fichero generado» va en `header` dentro de `.versionrc.json`, que es lo que sobrevive a cada release.                                         |
+| Los hooks de git no se ejecutan                                                                    | `npm ci --ignore-scripts` (política de §2) salta el script `prepare`, que es el que instala husky.                                                                                                                     | Ejecutar `npm run prepare` una vez tras el primer install. Es el precio de `ignore-scripts`, y es barato.                                                                                   |
+| `MODULE_NOT_FOUND: './app.module'` en el contenedor                                                | `incremental: true` + `deleteOutDir: true`: se borra `dist` pero sobrevive el `.tsbuildinfo`, así que la build incremental no emite nada.                                                                              | `tsBuildInfoFile` dentro de `dist`.                                                                                                                                                         |
+| Editar `tsconfig.json` no tiene efecto en Docker                                                   | Solo `src/` estaba bind-mounteado.                                                                                                                                                                                     | Montar también `tsconfig*.json` y `nest-cli.json` (§5.1).                                                                                                                                   |
+| Todo `POST` responde 400 con «todos los campos faltan»                                             | `bodyParser: false` desactiva el parser de **toda** la app, no solo de `/api/auth`.                                                                                                                                    | Reactivar `express.json()` salvo para `/api/auth` (§3.7).                                                                                                                                   |
+| La app no arranca: «circular dependency (property key: data)»                                      | Swagger no resuelve el genérico `T` de `PaginatedResponseDto`.                                                                                                                                                         | Declarar `data` explícito como array de objetos; `allOf` compone el tipo real.                                                                                                              |
+| `sign-up` da 500: `column "issuer" does not exist`                                                 | `@better-auth/cli` empaqueta better-auth 1.6.21; la 1.7 añadió la columna.                                                                                                                                             | Obtener el delta de `getMigrations()` del paquete instalado, no del CLI (§3.10).                                                                                                            |
+| El seed falla con `Nest can't resolve dependencies (?, +, +, ...)` bajo `tsx` **y** bajo `ts-node` | El mismo código compilado con `nest build` arranca perfectamente. La DI de Nest lee `design:paramtypes`, y los transpiladores que resuelven fichero a fichero no lo emiten igual que `tsc` sobre el proyecto completo. | Que `seed:dev` sea `nest build && node dist/database/seeds/run-seeds.js`. Cualquier script que arranque un contexto de Nest debe correr sobre el artefacto compilado, no sobre las fuentes. |
+| `make test` en el frontend: `Cannot find module '/app/test/setup.ts'`                              | `.dockerignore` excluye `test/` de la imagen —correctamente: una imagen de producción no debe llevar tests— y el compose no lo bind-mounteaba.                                                                         | Montar `./test` y `vitest.config.ts` en `docker-compose.yml`. Excluirlos de la imagen y montarlos en desarrollo no es contradictorio: son dos necesidades distintas.                        |
+| `make start` en el frontend: `ports are not available: 0.0.0.0:3001`                               | Un servidor de desarrollo corriendo en el host ocupa el puerto que quiere el contenedor.                                                                                                                               | Parar el proceso del host. Vale la pena elegir: o se desarrolla en contenedores o en el host, pero las dos cosas a la vez compiten por los mismos puertos.                                  |
