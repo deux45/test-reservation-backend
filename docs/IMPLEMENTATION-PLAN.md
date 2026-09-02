@@ -2217,17 +2217,6 @@ explícita.
 
 **Total ≈ 54 h · solo núcleo ≈ 30 h**
 
-### 7.1 Trabajar con IA de forma que se pueda contar
-
-El enunciado quiere observar cómo trabajas con IA, y eso solo se enseña si queda rastro.
-Durante todas las fases, mantén un `NOTES.md` **fuera del control de versiones** donde
-anotes, en una línea, cada vez que: aceptaste una sugerencia sin cambios, la corregiste y
-por qué, o la descartaste. Ese fichero es el borrador del documento reflexivo de §8.
-
-Dos hábitos que dan material concreto: pide a la IA que **ataque** tu propio diseño
-(_"¿qué se rompe con dos instancias de la API?"_) en vez de solo generar código, y
-**escribe tú los tests de la regla central antes de generar su implementación**.
-
 ---
 
 ## 8. Documento reflexivo
@@ -2242,7 +2231,7 @@ hizo; la versión que destaca explica **lo que descartó**.
 | **2b. Dónde pusiste las abstracciones**            | Que descartaste `domain/application/infrastructure` por sobre-ingeniería a esta escala, y que aun así conservaste **dos** puertos: las reglas y el proveedor de identidad (§3.10). Saber dónde _no_ abstraer se lee mejor que abstraerlo todo. Cuenta también que descartaste el paquete comunitario de auth por 40 líneas propias. |
 | **3. Cómo lo probé**                               | Los siete casos frontera y por qué _a_ y _b_ son los interesantes. El test de las 25 peticiones y qué habría fallado sin el lock. Por qué Testcontainers y no un doble en memoria.                                                                                                                                                  |
 | **4. Dependencias y cadena de suministro**         | El cooldown de 7 días, y la consecuencia asumida: **20 de 55 paquetes fijados a una versión que no es la última, NestJS 11 en lugar del 12 publicado hace 4 días**. `class-transformer` sin mantenimiento desde 2021 y cómo lo mitigaste. Esta sección casi nadie la escribe.                                                       |
-| **5. Trabajar con IA**                             | Concreto y honesto, con ejemplos reales de tu `NOTES.md`. Dónde aceleró y **dónde te dio algo plausible pero incorrecto** —casi seguro, una comprobación de solape solo en el servicio, o la frontera `end == start` mal tratada—, cómo lo detectaste y qué hiciste.                                                                |
+| **5. Trabajar con IA**                             | Concreto y honesto, con ejemplos reales. Dónde aceleró y **dónde te dio algo plausible pero incorrecto** —casi seguro, una comprobación de solape solo en el servicio, o la frontera `end == start` mal tratada—, cómo lo detectaste y qué hiciste.                                                                                 |
 | **6. Lo que falta y qué haría con una semana más** | Sin excusas: paginación por offset en lugar de cursor, sin auditoría de cambios, sin rate limiting, cobertura de front deliberadamente ligera. Después, priorizado: reservas recurrentes, lista de espera sobre huecos liberados, métricas de ocupación.                                                                            |
 
 > **El detalle que casi nadie incluye.** Una sección corta titulada _"Un error que cometí"_.
