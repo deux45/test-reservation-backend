@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1.9
 # Production image: multi-stage, non-root, no install scripts, minimal surface.
 
-FROM node:24-alpine AS base
+FROM node:26-alpine AS base
 WORKDIR /app
 RUN apk add --no-cache tini
 
