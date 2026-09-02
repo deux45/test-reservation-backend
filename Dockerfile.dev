@@ -1,5 +1,5 @@
 # Development image: source is bind-mounted, so this layer only carries deps.
-FROM node:24-alpine
+FROM node:26-alpine
 
 WORKDIR /app
 RUN apk add --no-cache tini
