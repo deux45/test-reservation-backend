@@ -45,9 +45,8 @@ Backend: NestJS + PostgreSQL + TypeORM · Frontend: Next.js + React + MUI
 | Zona horaria              | **`timestamptz` siempre**; TZ del recurso solo para calcular                                                    | UTC en disco elimina los bugs de horario de verano.                                                                  | `timestamp` sin zona.                                                                                                                                                |
 | Versiones de dependencias | **Cooldown de 7 días** sobre la última estable                                                                  | Todos los incidentes de 2025–2026 se detectaron en < 7 días.                                                         | Instalar `latest`: es exactamente el vector de ataque.                                                                                                               |
 
-**Principio rector.** El enunciado dice: _"preferimos un sistema simple y sólido antes que
-uno ambicioso y roto"_. Este diseño concentra su complejidad en la creación de reservas y
-mantiene todo lo demás deliberadamente aburrido. Reservas recurrentes y notificaciones
+**Principio rector.** Ante la duda, robustez antes que ambición. Este diseño concentra su
+complejidad en la creación de reservas y mantiene todo lo demás deliberadamente aburrido. Reservas recurrentes y notificaciones
 quedan **fuera de alcance**, y eso se justifica en el documento reflexivo.
 
 ---
@@ -856,18 +855,19 @@ export function setupSwagger(app: INestApplication): void {
     .setVersion(process.env.npm_package_version ?? '0.0.0')
     .addServer('http://localhost:3000', 'Local')
 
-    // Better Auth autentica por cookie de sesión, no por bearer. Sin esto, el
-    // botón "Authorize" de Swagger UI no sirve para nada.
+    // Better Auth authenticates with a session cookie, not a bearer token.
+    // With addBearerAuth the "Authorize" button in Swagger UI does nothing.
     .addCookieAuth('better-auth.session_token', {
       type: 'apiKey',
       in: 'cookie',
-      description: 'Cookie de sesión emitida por POST /api/auth/sign-in/email',
+      description: 'Session cookie issued by POST /api/auth/sign-in/email',
     })
 
-    .addTag('Resource types', 'Familias de recursos y su esquema de atributos')
-    .addTag('Resources', 'Alta, consulta y baja de recursos reservables')
-    .addTag('Availability', 'Huecos libres de un recurso en un rango')
-    .addTag('Reservations', 'Crear, listar, reprogramar y cancelar reservas')
+    .addTag('Health', 'Liveness and readiness')
+    .addTag('Resource types', 'Families of bookable resources')
+    .addTag('Resources', 'Create, list, update and deactivate bookable resources')
+    .addTag('Availability', 'Free slots for a resource within a range')
+    .addTag('Reservations', 'Create, list, reschedule and cancel reservations')
     .build();
 
   const document = SwaggerModule.createDocument(app, config);
@@ -1860,7 +1860,7 @@ start: ## Arranque completo desde cero
 | Otros         | `logs` `shell` `openapi` `build` `prod-up` `release` `clean`         | `logs` `shell` `api-types` `build` `prod-up` `release` `clean` |
 
 `verify-overlap` y `verify-concurrency` merecen estar aquí y no sólo en la suite de
-tests: son la demostración de la regla central de la prueba, y que se ejecuten con un
+tests: son la demostración de la regla central del sistema, y que se ejecuten con un
 comando de una palabra es parte de la entrega.
 
 #### Sobre Windows
@@ -1990,8 +1990,8 @@ fallan: **nunca se libera desde un árbol en rojo.**
 
 ## 6. Estrategia de pruebas
 
-El enunciado dice: _"queremos ver cómo la resuelves y **cómo la pruebas**"_. Las pruebas son
-la mitad del entregable.
+Resolver la regla y demostrar que está resuelta son dos trabajos distintos, y el segundo
+es la mitad del entregable.
 
 ### 6.1 Backend
 
