@@ -2218,11 +2218,6 @@ explícita.
 
 **Total ≈ 57 h · solo núcleo ≈ 33 h**
 
-> **Si el tiempo se acorta**, recorta en este orden: F15 (agenda y e2e del front), F13
-> (alta de recursos desde la UI, dejando solo lectura), F3 (auth: es opcional en el
-> enunciado). **Nunca recortes F5, F8 ni F16.** Son, en ese orden, lo que la prueba está
-> evaluando de verdad: la regla, su demostración y tu criterio.
-
 ### 7.1 Trabajar con IA de forma que se pueda contar
 
 El enunciado quiere observar cómo trabajas con IA, y eso solo se enseña si queda rastro.
