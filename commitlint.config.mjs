@@ -28,6 +28,8 @@ export default {
         'common',
         'config',
         'docker',
+        // Developer tooling: the Makefile and everything under scripts/.
+        'tooling',
         'ci',
         'docs',
         'deps',

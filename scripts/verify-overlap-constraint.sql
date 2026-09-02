@@ -15,13 +15,17 @@ BEGIN;
 INSERT INTO "user" ("id", "name", "email", "emailVerified", "role")
 VALUES ('u-test', 'Tester', 'tester@example.com', true, 'user');
 
+-- A code of its own, not one from the catalogue seeded by migration 5: the
+-- fixture must not collide with real reference data, and a unique constraint
+-- violation here would look like a failure of the thing being tested.
 INSERT INTO resource_type (id, code, name)
-VALUES ('11111111-1111-1111-1111-111111111111', 'meeting-room', 'Sala de reuniones');
+VALUES ('11111111-1111-1111-1111-111111111111',
+        'verify-overlap-fixture', 'Fixture de verificacion');
 
 INSERT INTO resource (id, resource_type_id, code, name, capacity, time_zone)
 VALUES ('22222222-2222-2222-2222-222222222222',
         '11111111-1111-1111-1111-111111111111',
-        'aurora', 'Sala Aurora', 12, 'Europe/Madrid');
+        'verify-overlap-room', 'Sala de verificacion', 12, 'Europe/Madrid');
 
 -- The reference booking: 2026-09-15, 10:00 to 11:00 UTC.
 INSERT INTO reservation (resource_id, user_id, title, start_at, end_at)
