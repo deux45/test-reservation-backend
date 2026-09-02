@@ -1,50 +1,50 @@
 # Reservations API
 
-API para reservar recursos compartidos: salas, portátiles, vehículos y cualquier
-otro tipo que se dé de alta.
+An API for booking shared resources: meeting rooms, laptops, vehicles, and any
+other type someone chooses to register.
 
-La regla central es que **dos reservas activas no pueden solaparse sobre el mismo
-recurso**. Todo lo demás en este repositorio es consecuencia de tomarse esa
-frase en serio.
+The central rule is that **no two active reservations may overlap on the same
+resource**. Everything else in this repository follows from taking that sentence
+seriously.
 
 - **Stack**: NestJS 11 · TypeScript 6 · PostgreSQL 18 · TypeORM · Better Auth
-- **Interfaz**: [test-reservation-frontend](../test-reservation-frontend) (Next.js 16 + MUI)
+- **Web client**: [test-reservation-frontend](../test-reservation-frontend) (Next.js 16 + MUI)
 
 ---
 
-## Arranque
+## Getting started
 
-Sólo hace falta Docker. Ni Node en el equipo, ni fichero `.env` que escribir, ni
-orden de pasos que recordar.
+Docker is the only requirement. No Node on the host, no `.env` to write, no
+order of steps to remember.
 
 ```bash
 make start
 ```
 
-Eso construye las imágenes, levanta PostgreSQL, espera a que acepte conexiones,
-aplica las diez migraciones, carga datos de demostración y deja la API
-escuchando.
+That builds the images, starts PostgreSQL, waits until it actually accepts
+connections, applies the ten migrations, loads demo data and leaves the API
+listening.
 
-| Servicio | URL                          |                                                     |
-| -------- | ---------------------------- | --------------------------------------------------- |
-| API      | http://localhost:3000/api/v1 |                                                     |
-| Swagger  | http://localhost:3000/docs   | documentación interactiva                           |
-| Adminer  | http://localhost:8080        | servidor `postgres`, usuario y clave `reservations` |
+| Service | URL                          |                                                     |
+| ------- | ---------------------------- | --------------------------------------------------- |
+| API     | http://localhost:3000/api/v1 |                                                     |
+| Swagger | http://localhost:3000/docs   | interactive documentation                           |
+| Adminer | http://localhost:8080        | server `postgres`, user and password `reservations` |
 
-Usuarios de demostración, todos con la contraseña `Reservas2026!`:
+Demo accounts, all with the password `Reservas2026!`:
 
-| Correo                | Rol   |
+| Email                 | Role  |
 | --------------------- | ----- |
 | `admin@reservas.dev`  | admin |
 | `carlos@reservas.dev` | user  |
 | `marta@reservas.dev`  | user  |
 
-Para ver la interfaz completa, arranca también el repositorio del frontend
-(su `make start` levanta este si hace falta).
+For the full interface, start the frontend repository as well — its `make start`
+starts this one if it is not already running.
 
-### Si no tienes `make`
+### Without `make`
 
-Es un envoltorio, no un requisito. Lo mismo a mano:
+It is a wrapper, not a requirement. The same thing by hand:
 
 ```bash
 docker compose up -d --build
@@ -52,56 +52,57 @@ docker compose exec api npm run migration:run:dev
 docker compose exec api npm run seed:dev
 ```
 
-En Windows, `make` se instala con `winget install GnuWin32.Make`, con Chocolatey
-(`choco install make`) o usando WSL.
+On Windows, `make` installs with `winget install GnuWin32.Make`, with Chocolatey
+(`choco install make`), or from WSL.
 
 ---
 
-## Comandos
+## Commands
 
-`make` sin argumentos lista todo. Los que se usan a diario:
+`make` with no arguments lists everything. The ones used daily:
 
-| Comando                   | Qué hace                                            |
-| ------------------------- | --------------------------------------------------- |
-| `make start`              | Arranque completo desde cero                        |
-| `make reset`              | Borra la base de datos y vuelve a empezar           |
-| `make logs-api`           | Sigue los logs de la API                            |
-| `make psql`               | Consola SQL                                         |
-| `make test`               | Tests unitarios                                     |
-| `make check`              | Lo mismo que valida CI: tipos, lint y tests         |
-| `make verify-overlap`     | Demuestra la restricción de solapamiento por SQL    |
-| `make verify-concurrency` | 25 reservas simultáneas: debe ganar exactamente una |
+| Command                   | What it does                                   |
+| ------------------------- | ---------------------------------------------- |
+| `make start`              | Full bootstrap from nothing                    |
+| `make reset`              | Wipe the database and start over               |
+| `make logs-api`           | Follow the API logs                            |
+| `make psql`               | SQL console                                    |
+| `make test`               | Unit tests                                     |
+| `make check`              | What CI validates: types, lint and tests       |
+| `make verify-overlap`     | Proves the overlap constraint in SQL           |
+| `make verify-concurrency` | 25 simultaneous bookings; exactly one must win |
 
 ---
 
-## La regla central
+## The central rule
 
-El requisito es una sola frase, pero admite muchas implementaciones y casi todas
-están mal. Ésta usa **tres capas**, y sólo la tercera es una garantía.
+The requirement is one sentence, but it admits many implementations and almost
+all of them are wrong. This one uses **three layers**, and only the third is a
+guarantee.
 
-### 1. El objeto de valor `Period` — la forma
+### 1. The `Period` value object — shape
 
 [`src/reservations/period.vo.ts`](src/reservations/period.vo.ts)
 
-Un rango inválido no llega a existir: el constructor es privado y `create()`
-valida que el fin sea posterior al inicio, que la duración esté dentro de los
-límites y que los minutos caigan en la granularidad permitida. Un `Period` mal
-formado no es algo que se detecte, es algo que no se puede construir.
+An invalid range never comes into existence: the constructor is private, and
+`create()` checks that the end is after the start, that the duration is within
+bounds, and that the minutes fall on the allowed granularity. A malformed
+`Period` is not something to be detected; it is something that cannot be built.
 
-Los intervalos son **semiabiertos**, `[inicio, fin)`. Una reserva de 10:00 a
-11:00 y otra de 11:00 a 12:00 no se solapan. Esta decisión se repite idéntica en
-las tres capas, y es la única forma de que las tres estén de acuerdo.
+Intervals are **half-open**, `[start, end)`. A booking from 10:00 to 11:00 and
+one from 11:00 to 12:00 do not overlap. This decision is repeated identically in
+all three layers, and it is the only way the three can agree.
 
-### 2. Bloqueo y reglas de negocio — el mensaje útil
+### 2. Lock and business rules — the useful message
 
 [`src/reservations/services/reservation.service.ts`](src/reservations/services/reservation.service.ts)
 
-Dentro de la transacción se toma un `pg_advisory_xact_lock` por recurso. Eso
-serializa las reservas _de ese recurso_ sin serializar la API entera, que es lo
-que pasaría con un nivel de aislamiento `SERIALIZABLE`.
+Inside the transaction a `pg_advisory_xact_lock` is taken per resource. That
+serialises bookings _for that resource_ without serialising the whole API, which
+is what a `SERIALIZABLE` isolation level would do.
 
-Con el bloqueo tomado se ejecutan siete reglas, cada una en su clase, ordenadas
-de más barata a más cara:
+With the lock held, seven rules run, each in its own class, ordered cheapest
+first:
 
 ```
 ResourceIsActiveRule → NotInThePastRule → SufficientCapacityRule
@@ -109,13 +110,14 @@ ResourceIsActiveRule → NotInThePastRule → SufficientCapacityRule
 → ActiveReservationLimitRule
 ```
 
-Añadir una regla es añadir una clase y una línea en el módulo. El servicio no se
-toca: principio abierto/cerrado como algo que se puede señalar, no afirmar.
+Adding a rule is adding a class and one line in the module. The service is not
+touched: the open/closed principle as something you can point at rather than
+assert.
 
-Esta capa es la que produce un 409 que dice _qué_ franja choca. No es la que
-garantiza nada.
+This layer is what produces a 409 that says _which_ range clashes. It is not
+what guarantees anything.
 
-### 3. La restricción `EXCLUDE` — la garantía
+### 3. The `EXCLUDE` constraint — the guarantee
 
 [`src/database/migrations/1756700000004-Reservations.ts`](src/database/migrations/1756700000004-Reservations.ts)
 
@@ -128,131 +130,130 @@ CONSTRAINT reservation_no_overlap EXCLUDE USING gist (
 ) WHERE (status = 'CONFIRMED')
 ```
 
-Esto es lo que hace que el requisito se cumpla siempre. No importa cuántas
-instancias de la API haya, ni si alguien inserta a mano por `psql`, ni si una
-futura refactorización se olvida de llamar a las reglas: PostgreSQL rechaza la
-fila.
+This is what makes the requirement hold always. It does not matter how many API
+instances are running, whether someone inserts by hand through `psql`, or
+whether a future refactor forgets to call the rules: PostgreSQL rejects the row.
 
-Tres detalles que la hacen funcionar:
+Three details make it work:
 
-- `WHERE (status = 'CONFIRMED')` la hace **parcial**. Cancelar libera la franja
-  en el mismo instante, y una reserva cancelada puede convivir con la confirmada
-  que ocupa su hueco.
-- `period` es una columna **generada**, propiedad de la base de datos. No puede
-  desviarse de las dos columnas de las que deriva porque nadie la escribe.
-- Mezclar `=` sobre un `uuid` con `&&` sobre un rango en un único índice GiST
-  requiere la extensión `btree_gist`, que crea la migración 1.
+- `WHERE (status = 'CONFIRMED')` makes it **partial**. Cancelling frees the slot
+  in the same instant, and a cancelled reservation can coexist with the
+  confirmed one now occupying its slot.
+- `period` is a **generated** column owned by the database. It cannot drift from
+  the two columns it derives from because nobody writes it.
+- Mixing `=` on a `uuid` with `&&` on a range in a single GiST index requires
+  the `btree_gist` extension, created by migration 1.
 
-El error `23P01` se traduce a `OverlappingReservationError` y de ahí a un 409.
+Error `23P01` is translated into `OverlappingReservationError` and from there
+into a 409.
 
-### Cómo se comprueba
+### How it is verified
 
-Dos verificaciones, deliberadamente distintas:
+Two checks, deliberately different:
 
 ```bash
-make verify-overlap      # SQL directo, saltándose la API
-make verify-concurrency  # 25 POST simultáneos por HTTP
+make verify-overlap      # straight SQL, bypassing the API
+make verify-concurrency  # 25 simultaneous POSTs over HTTP
 ```
 
-La primera importa precisamente porque **no** pasa por el código de aplicación:
-si la garantía dependiera del servicio, esta prueba no demostraría nada. Cubre
-siete casos frontera, incluido el contiguo (`10-11` y `11-12`, que debe
-aceptarse) y el de cancelación.
+The first matters precisely because it does **not** go through application code:
+if the guarantee depended on the service, this test would prove nothing. It
+covers seven boundary cases, including the contiguous one (`10-11` and `11-12`,
+which must be accepted) and the cancellation case.
 
-La segunda lanza 25 peticiones a la vez sobre la misma franja. El resultado
-esperado es exactamente un `201` y veinticuatro `409`, con una sola fila
-`CONFIRMED` en la tabla.
+The second fires 25 requests at once for the same slot. The expected result is
+exactly one `201` and twenty-four `409`s, with a single `CONFIRMED` row in the
+table.
 
 ---
 
 ## Endpoints
 
-Todo bajo `/api/v1`. La referencia viva y ejecutable está en
+Everything under `/api/v1`. The live, executable reference is at
 [http://localhost:3000/docs](http://localhost:3000/docs).
 
-### Reservas
+### Reservations
 
-| Método  | Ruta                             |                                  |
-| ------- | -------------------------------- | -------------------------------- |
-| `POST`  | `/reservations`                  | Crear. Acepta `Idempotency-Key`  |
-| `GET`   | `/reservations`                  | Listado con filtros y paginación |
-| `GET`   | `/reservations/:id`              | Detalle                          |
-| `PATCH` | `/reservations/:id`              | Reprogramar                      |
-| `POST`  | `/reservations/:id/cancellation` | Cancelar                         |
+| Method  | Path                             |                                   |
+| ------- | -------------------------------- | --------------------------------- |
+| `POST`  | `/reservations`                  | Create. Accepts `Idempotency-Key` |
+| `GET`   | `/reservations`                  | List with filters and pagination  |
+| `GET`   | `/reservations/:id`              | Detail                            |
+| `PATCH` | `/reservations/:id`              | Reschedule                        |
+| `POST`  | `/reservations/:id/cancellation` | Cancel                            |
 
-Filtros del listado: `resourceId`, `userId`, `status` (repetible), `from`, `to`,
+List filters: `resourceId`, `userId`, `status` (repeatable), `from`, `to`,
 `page`, `limit`.
 
-La cancelación es un `POST` que crea un hecho, no un `DELETE`. No se borra nada:
-quedan registrados quién canceló, cuándo y por qué, y la franja se libera al
-instante.
+Cancellation is a `POST` that records a fact, not a `DELETE`. Nothing is
+removed: who cancelled, when and why are all kept, and the slot is freed
+instantly.
 
-### Recursos
+### Resources
 
-| Método   | Ruta                          |                               |
-| -------- | ----------------------------- | ----------------------------- |
-| `GET`    | `/resources`                  | Listado                       |
-| `GET`    | `/resources/:id`              | Detalle                       |
-| `POST`   | `/resources`                  | Alta                          |
-| `PATCH`  | `/resources/:id`              | Edición                       |
-| `DELETE` | `/resources/:id`              | Baja lógica                   |
-| `POST`   | `/resources/:id/activation`   | Reactivación                  |
-| `GET`    | `/resources/:id/availability` | **Huecos libres en un rango** |
+| Method   | Path                          |                           |
+| -------- | ----------------------------- | ------------------------- |
+| `GET`    | `/resources`                  | List                      |
+| `GET`    | `/resources/:id`              | Detail                    |
+| `POST`   | `/resources`                  | Create                    |
+| `PATCH`  | `/resources/:id`              | Update                    |
+| `DELETE` | `/resources/:id`              | Deactivate                |
+| `POST`   | `/resources/:id/activation`   | Reactivate                |
+| `GET`    | `/resources/:id/availability` | **Free slots in a range** |
 
-`DELETE` desactiva, no borra. Un recurso con reservas históricas nunca se
-elimina: hacerlo las dejaría huérfanas, y la clave foránea con `RESTRICT` lo
-rechazaría de todos modos.
+`DELETE` deactivates, it does not delete. A resource with historical
+reservations is never removed: doing so would orphan them, and the foreign key's
+`RESTRICT` would refuse it anyway.
 
-`/availability` parte del horario operativo del recurso y le resta bloqueos y
-reservas confirmadas. Acepta `from`, `to` y `minDurationMinutes`, y el rango está
-limitado a 60 días: pedir un año de huecos es una denegación de servicio
-disfrazada de consulta.
+`/availability` starts from the resource's operating hours and subtracts
+maintenance blocks and confirmed reservations. It accepts `from`, `to` and
+`minDurationMinutes`, and the range is capped at 60 days: asking for a year of
+slots is a denial-of-service dressed as a query.
 
-### Usuarios y catálogo
+### Users and catalogue
 
-| Método              | Ruta              |                        |
-| ------------------- | ----------------- | ---------------------- |
-| `GET`               | `/users`          | Listado (admin)        |
-| `POST`              | `/users`          | Alta (admin)           |
-| `PATCH`             | `/users/:id`      | Editar nombre y correo |
-| `PATCH`             | `/users/:id/role` | Cambiar rol            |
-| `POST` `/` `DELETE` | `/users/:id/ban`  | Bloquear y desbloquear |
-| `GET` `/` `POST`    | `/resource-types` | Catálogo de tipos      |
+| Method            | Path              |                     |
+| ----------------- | ----------------- | ------------------- |
+| `GET`             | `/users`          | List (admin)        |
+| `POST`            | `/users`          | Create (admin)      |
+| `PATCH`           | `/users/:id`      | Edit name and email |
+| `PATCH`           | `/users/:id/role` | Change role         |
+| `POST` / `DELETE` | `/users/:id/ban`  | Ban and unban       |
+| `GET` / `POST`    | `/resource-types` | Type catalogue      |
 
 ---
 
-## Estructura
+## Structure
 
-Un directorio por módulo de negocio, y dentro la separación por
-responsabilidad —la misma forma en los cuatro:
+One directory per business module, and inside it the split by responsibility —
+the same shape in all four:
 
 ```
 src/
-├── auth/                    Identidad: puerto, adaptadores, guardas
-│   ├── ports/               AuthProvider: toda la superficie de acoplamiento
+├── auth/                    Identity: port, adapters, guards
+│   ├── ports/               AuthProvider: the entire coupling surface
 │   ├── providers/           better-auth.provider.ts, fake-auth.provider.ts
-│   ├── guards/              Autenticación y autorización, globales
+│   ├── guards/              Authentication and authorisation, both global
 │   └── decorators/          @Public(), @Roles(), @CurrentUser()
-├── common/                  Errores RFC 7807, paginación, utilidades
-├── config/                  Validación del entorno con zod, Swagger
+├── common/                  RFC 7807 errors, pagination, shared utilities
+├── config/                  Environment validation with zod, Swagger
 ├── database/
-│   ├── migrations/          Diez, numeradas y ordenadas
-│   └── seeds/               Datos de demostración, idempotentes
+│   ├── migrations/          Ten, numbered and ordered
+│   └── seeds/               Demo data, idempotent
 ├── reservations/            controllers · dtos · entities · repositories
-│   ├── rules/               Una clase por regla de negocio
+│   ├── rules/               One class per business rule
 │   ├── services/            reservation · availability · lock · clock
-│   ├── utils/               Aritmética de intervalos, pura
-│   └── period.vo.ts         El objeto de valor
+│   ├── utils/               Interval arithmetic, pure
+│   └── period.vo.ts         The value object
 ├── resources/               controllers · dtos · entities · repositories · services
 ├── users/                   controllers · dtos · entities · repositories · services
 └── health/
 ```
 
-### Por qué la autenticación está detrás de un puerto
+### Why authentication sits behind a port
 
-Better Auth resuelve mucho, pero es una dependencia joven en una parte del
-sistema que es cara de cambiar. Toda la superficie de acoplamiento cabe en una
-interfaz:
+Better Auth solves a lot, but it is a young dependency in a part of the system
+that is expensive to change. The entire coupling surface fits in one interface:
 
 ```ts
 export interface AuthProvider {
@@ -263,112 +264,110 @@ export interface AuthProvider {
 }
 ```
 
-Nada fuera de `src/auth/` importa `better-auth` —lo impide una regla de ESLint,
-no una convención—. Sustituirlo por Auth0, Keycloak o un SSO corporativo es
-escribir una clase nueva y cambiar una variable de entorno. El
-`auth-provider.contract.ts` es un test de contrato que cualquier implementación
-debe pasar, así que el sustituto se valida antes de enchufarlo.
+Nothing outside `src/auth/` imports `better-auth` — enforced by an ESLint rule,
+not by convention. Replacing it with Auth0, Keycloak or a corporate SSO means
+writing one class and changing an environment variable.
+`auth-provider.contract.ts` is a contract test any implementation must pass, so
+the replacement is validated before being plugged in.
 
-`createAccount` es opcional a propósito: un proveedor respaldado por SSO
-corporativo no puede crear cuentas, y la API responde 501 en vez de fingir que
-el intento falló.
+`createAccount` is optional on purpose: a provider backed by corporate SSO
+cannot create accounts, and the API answers 501 rather than pretending the
+attempt failed.
 
 ---
 
 ## Tests
 
 ```bash
-make test    # 57 unitarios
-make check   # tipos + lint + tests, lo mismo que CI
+make test    # 57 unit tests
+make check   # types + lint + tests, the same as CI
 ```
 
-Testcontainers está configurado y `make test-e2e` existe, pero **la suite
-end-to-end aún no está escrita**: hoy ese comando no ejecuta ningún test. El
-diseño es que levante su propio PostgreSQL en lugar de reutilizar el de
-desarrollo, porque un test que depende del estado que le dejó el anterior es un
-test que falla los martes.
+Testcontainers is configured and `make test-e2e` exists, but **the end-to-end
+suite is not written yet**: today that command runs no tests. The design is for
+it to start its own PostgreSQL rather than reuse the development one, because a
+test that depends on the state the previous one left behind is a test that fails
+on Tuesdays.
 
-Mientras tanto, la garantía central sí está verificada de dos formas
-independientes: `make verify-overlap` y `make verify-concurrency`.
+In the meantime the central guarantee _is_ verified, two independent ways:
+`make verify-overlap` and `make verify-concurrency`.
 
-Lo que se prueba y por qué:
+What is covered and why:
 
-- **`Period`** — casos frontera de la semiapertura, granularidad y duración.
-- **`subtractIntervals`** — la aritmética de huecos, con solapes entre
-  intervalos ocupados y el caso contiguo que no debe generar un hueco fantasma.
-- **Cada regla**, aislada de las demás.
-- **Guardas** de autenticación y autorización.
-- **El contrato de `AuthProvider`**, contra el adaptador real y contra el falso.
-
----
-
-## Decisiones que merecen explicación
-
-**`synchronize` es `false` y seguirá siéndolo.** La sincronización automática de
-TypeORM no sabe expresar una columna generada ni una restricción `EXCLUDE`, y
-las borraría sin avisar. El esquema es de las migraciones.
-
-**Las migraciones no corren al arrancar.** `migrationsRun` está en `false` en
-las dos fuentes de datos y existe un ejecutable aparte
-(`node dist/database/run-migrations.js`). Si corrieran al arrancar, cada réplica
-competiría por alterar el mismo esquema en cada despliegue, y una migración
-fallida se convertiría en un bucle de reinicios en vez de en un paso fallido.
-
-**El `Idempotency-Key` es del cliente, no del servidor.** Respaldado por un
-índice único parcial sobre `(user_id, idempotency_key)`, parcial para que las
-muchas filas sin clave no choquen entre sí. Un doble clic es un reintento, y
-devuelve la reserva que ya se creó en lugar de un 409.
-
-**Los errores siguen RFC 7807.** `application/problem+json` con el
-`x-request-id` incluido, así que un error que reporta un usuario se puede
-encontrar en los logs.
-
-**La zona horaria vive en el recurso.** Los horarios operativos son hora local
-(«de 9 a 18 los laborables») mientras que los instantes se guardan en UTC.
-Guardar la zona en el recurso es lo que hace que esa frase signifique lo mismo a
-los dos lados de un cambio de horario de verano.
+- **`Period`** — the boundary cases of half-openness, granularity and duration.
+- **`subtractIntervals`** — the free-slot arithmetic, with overlapping busy
+  intervals and the contiguous case that must not produce a phantom slot.
+- **Every rule**, in isolation from the others.
+- **The guards**, authentication and authorisation.
+- **The `AuthProvider` contract**, against the real adapter and the fake one.
 
 ---
 
-## Cadena de suministro
+## Decisions worth explaining
 
-Un `npm install` descuidado es hoy el vector más probable de compromiso, así que
-hay medidas concretas:
+**`synchronize` is `false` and will stay that way.** TypeORM's auto-synchronise
+cannot express a generated column or an `EXCLUDE` constraint, and would drop
+them without warning. The schema belongs to the migrations.
 
-- **`ignore-scripts=true`** en `.npmrc`. Ningún `postinstall` se ejecuta al
-  instalar: es el vector número uno de los gusanos de npm.
-- **`min-release-age=7`**. Una versión publicada hace menos de una semana no
-  entra. La mayoría de los paquetes comprometidos se detectan y retiran en
-  horas.
-- **Versiones exactas**, sin `^` ni `~`, y `npm ci` en todas partes.
-- **`make audit`** comprueba vulnerabilidades conocidas, firmas del registro y
-  la base de datos de OSV.dev.
-- **Acciones de GitHub fijadas por SHA**, no por etiqueta: una etiqueta se puede
-  repuntar, un SHA no.
-- La imagen de producción es multi-etapa, corre como `node` (no root), con
-  sistema de ficheros de sólo lectura, sin capacidades y con `tini` como PID 1.
+**Migrations do not run at boot.** `migrationsRun` is `false` in both data
+sources, and there is a separate entry point
+(`node dist/database/run-migrations.js`). Running them at boot would have every
+replica racing to alter the same schema on every deploy, and a failed migration
+would become a crash loop instead of a failed step.
 
-Estado actual: **0 vulnerabilidades**.
+**The `Idempotency-Key` belongs to the client, not the server.** Backed by a
+partial unique index on `(user_id, idempotency_key)` — partial so the many rows
+without a key do not collide with each other. A double click is a retry, and
+returns the reservation already created instead of a 409.
+
+**Errors follow RFC 7807.** `application/problem+json`, with the `x-request-id`
+included, so an error a user reports can be found in the logs.
+
+**The time zone lives on the resource.** Operating hours are wall-clock ("09:00
+to 18:00 on weekdays") while instants are stored in UTC. Keeping the zone on the
+resource is what makes that sentence mean the same thing on both sides of a
+daylight saving change.
 
 ---
 
-## Versionado
+## Supply chain
 
-Commits convencionales validados por commitlint, `CHANGELOG.md` generado a
-partir de ellos y versionado semántico:
+A careless `npm install` is today the most likely vector of compromise, so there
+are concrete measures:
+
+- **`ignore-scripts=true`** in `.npmrc`. No `postinstall` runs on install: it is
+  the number one vector of every npm worm.
+- **`min-release-age=7`**. A version published less than a week ago is not
+  installed. Most compromised packages are caught and pulled within hours.
+- **Exact versions**, no `^` or `~`, and `npm ci` everywhere.
+- **`make audit`** checks known vulnerabilities, registry signatures and the
+  OSV.dev database.
+- **GitHub Actions pinned by SHA**, not by tag: a tag can be repointed, a SHA
+  cannot.
+- The production image is multi-stage, runs as `node` (not root), with a
+  read-only filesystem, no capabilities and `tini` as PID 1.
+
+Current state: **0 vulnerabilities**.
+
+---
+
+## Versioning
+
+Conventional commits validated by commitlint, `CHANGELOG.md` generated from them
+and semantic versioning:
 
 ```bash
 make release
 ```
 
-El changelog no se edita a mano. Si una entrada está mal redactada, el problema
-está en el mensaje del commit.
+The changelog is not edited by hand. If an entry reads badly, the problem is in
+the commit message.
 
 ---
 
-## Documentación
+## Documentation
 
-- [`docs/IMPLEMENTATION-PLAN.md`](docs/IMPLEMENTATION-PLAN.md) — el plan
-  completo, con las decisiones de diseño y un apéndice de tropiezos operativos
-  encontrados durante la implementación.
+- [`docs/IMPLEMENTATION-PLAN.md`](docs/IMPLEMENTATION-PLAN.md) — the full plan,
+  with the design decisions and an appendix of operational gotchas found while
+  implementing. Written in Spanish, as agreed for the planning document.
 - [http://localhost:3000/docs](http://localhost:3000/docs) — Swagger.
